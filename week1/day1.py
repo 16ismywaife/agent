@@ -7,6 +7,12 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 
+# 终端中文不乱码
+# Windows 下 Python 默认按 GBK 输出，而控制台是 UTF-8，两边对不上就变乱码。
+# 这一行强制按 UTF-8 输出。加 hasattr 判断是为了兼容输出被重定向的情况。
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 print("=" * 40)
 print("Python :", sys.version.split()[0])
 print("解释器 :", sys.executable)
