@@ -1,0 +1,17 @@
+# 第 1 周就要用的基础库
+numpy
+pandas
+matplotlib
+jupyter
+
+# 第 2 周（PyTorch 请去 pytorch.org 按自己系统选命令安装，别直接 pip）
+# torch
+# torchvision
+
+# 第 3 周
+# openai
+# python-dotenv
+
+# 第 4 周
+# ultralytics
+# opencv-python

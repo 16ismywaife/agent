@@ -1,0 +1,36 @@
+# ===== 绝对不要提交 =====
+.env
+.env.*
+*.key
+*.pem
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ===== 编辑器 =====
+.vscode/
+.idea/
+.DS_Store
+
+# ===== 大文件 / 数据（提交上去仓库会变得很臃肿）=====
+data/
+checkpoints/
+*.pth
+*.pt
+*.onnx
+*.db
+*.sqlite
+*.csv
+*.zip
+
+# ===== 程序运行日志（噪音，不提交）=====
+logs/
+*.log
+
+# 注意：notes/ 不在忽略列表里 —— 工作日志必须提交！
+# 第 6 周汇报第 3 页「遇到什么问题、怎么解决」直接从这里取。
