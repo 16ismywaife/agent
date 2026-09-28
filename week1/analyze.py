@@ -58,13 +58,9 @@ def main():
 
     st = stats(df)
     print(st)
-    # TODO: 存成 summary.csv
     st.to_csv(os.path.join(args.outdir, "summary.csv"))
 
     plot(df, os.path.join(args.outdir, "result.png"))
-
-    print("完成")
-
 
     print("完成")
 
