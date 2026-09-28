@@ -44,6 +44,17 @@ def plot(df, out_path):
     fig.tight_layout()
     fig.savefig(out_path, dpi=130)
 
+def histogram(df, out_path):
+    """画分数分布直方图"""
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.hist(df["分数"], bins=20, color="#54A24B", edgecolor="white")
+    ax.set_title("全体分数分布")
+    ax.set_xlabel("分数")
+    ax.set_ylabel("人数")
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=130)
+    plt.close(fig)
+
 
 
 def main():
@@ -61,6 +72,8 @@ def main():
     st.to_csv(os.path.join(args.outdir, "summary.csv"))
 
     plot(df, os.path.join(args.outdir, "result.png"))
+
+    histogram(df, os.path.join(args.outdir, "hist.png"))
 
     print("完成")
 
