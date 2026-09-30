@@ -13,8 +13,11 @@
 - [2. 环境速查](#2-环境速查)
 - [3. 文件提交方式（Git 完整版）](#3-文件提交方式git-完整版)
 - [4. 知识点与代码](#4-知识点与代码)
-- [5. Bug 速查表](#5-bug-速查表)
-- [6. 卡住时的自救顺序](#6-卡住时的自救顺序)
+- [5. 观察期第 5-6 周怎么做](#5-观察期第-5-6-周怎么做)
+- [6. Bug 速查表](#6-bug-速查表)
+- [7. 卡住时的自救顺序](#7-卡住时的自救顺序)
+- [8. 每天的最小检查](#8-每天的最小检查)
+- [9. 三个月后回看这三条](#9-三个月后回看这三条)
 
 ---
 
@@ -896,9 +899,282 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 
 ---
 
-## 5. Bug 速查表
+### 4.14 Linux 常用命令（Week2，培养方案要求）
 
-### 5.1 ★ 你实际踩过的（最有价值）
+**你没有 Linux 机器，但命令要认识**——迟早会在服务器/容器里遇到。
+
+**在 Windows 上练习：用 Git Bash**（开始菜单搜 `Git Bash`），大部分命令通用。
+
+```bash
+pwd              # 我在哪个目录
+ls -la           # 列出所有文件（含隐藏）
+cd /path         # 切换目录
+cd ..            # 上一级
+mkdir demo       # 建目录
+cp a b           # 复制
+mv a b           # 移动 / 重命名
+rm file          # 删文件
+rm -rf demo/     # 删目录（★ 危险，想清楚再敲）
+cat file.txt     # 看文件内容
+head -n 20 f     # 看前 20 行
+tail -n 20 f     # 看后 20 行
+grep "error" log.txt        # 搜内容
+grep -r "def " .            # 递归搜
+find . -name "*.py"         # 找文件
+chmod +x run.sh             # 加执行权限
+ps aux | grep python        # 看进程
+top                         # 看资源占用
+nvidia-smi                  # 看显卡
+```
+
+**管道与重定向：**
+
+```bash
+python train.py > log.txt 2>&1    # 输出存文件（含报错）
+cat log.txt | grep "acc"          # 只看含 acc 的行
+```
+
+**和 Windows 的区别：**
+
+| | PowerShell | Linux / Git Bash |
+|---|---|---|
+| 路径分隔符 | `\` | `/` |
+| 家目录 | `$env:USERPROFILE` | `~`（**bash 里会展开**） |
+| 盘符 | `E:\agent` | `/e/agent` |
+| 删目录 | `Remove-Item -Recurse` | `rm -rf` |
+
+> ⚠️ **`~` 的区别**：Linux/Git Bash 里会展开；**PowerShell 里传给外部程序时不展开**（你踩过这个坑）。
+
+### 4.15 YOLO / 计算机视觉（Week3 备选分支）✅ 实测
+
+**Week3 是二选一：① YOLO 视觉 ② 大模型。你选了②，但①也记一下。**
+
+```bash
+pip install ultralytics opencv-python
+```
+
+```python
+import numpy as np
+import cv2
+from ultralytics import YOLO
+
+# 加载模型（第一次会自动下载权重；下载超时就指定本地路径）
+model = YOLO("yolov8n.pt")
+# model = YOLO(r"C:\Users\omen\yolov8n.pt")     # 用本机已有的
+
+img = cv2.imread("test.jpg")
+results = model(img, verbose=False)
+r = results[0]
+
+print(f"检测到 {len(r.boxes)} 个框")
+print(f"坐标:   {r.boxes.xyxy}")     # 形状 (N, 4)
+print(f"类别:   {r.boxes.cls}")      # 形状 (N,)
+print(f"置信度: {r.boxes.conf}")     # 形状 (N,)
+
+annotated = r.plot()                 # 返回 BGR 图像，形状同输入
+cv2.imwrite("out.jpg", annotated)
+```
+
+**实测结果**（用本机 `C:\Users\omen\yolov8n.pt`）：
+```
+模型加载   0.07s
+单张推理   1308ms
+r.boxes.xyxy 形状  (0, 4)
+r.plot() 返回      (480, 640, 3)
+```
+
+> **权重下载经常超时**（GitHub）。本机已有可直接用：
+> `C:\Users\omen\yolov8n.pt`、`D:\dsh\YOLO-Starfish-repo\weights\yolov8n.pt`
+
+### 4.16 视频 Edge（Week4 三方向之一）✅ 实测
+
+**关键指标是 FPS**（能不能实时处理）。
+
+```python
+import cv2, time
+from ultralytics import YOLO
+
+model = YOLO("yolov8n.pt")
+cap = cv2.VideoCapture("test.mp4")     # 或 0 用摄像头
+
+fps_list = []
+frames = 0
+t_start = time.time()
+
+while True:
+    ok, frame = cap.read()
+    if not ok:
+        break
+    t0 = time.time()
+    results = model(frame, verbose=False)
+    fps_list.append(1.0 / (time.time() - t0))
+
+    frames += 1
+    cv2.imwrite(f"out/frame_{frames:05d}.jpg", results[0].plot())
+    if frames >= 200:                   # 只跑 200 帧做测试
+        break
+
+cap.release()
+print(f"处理 {frames} 帧, 平均 {sum(fps_list)/len(fps_list):.1f} FPS")
+print(f"总耗时 {time.time()-t_start:.1f}s")
+```
+
+**实测**（60 帧随机噪声）：
+```
+平均 FPS: 12.4
+总耗时:   13.0s
+保存的帧: 3 个
+```
+
+**为什么 FPS 是关键指标**：视频通常 25–30 FPS。**处理速度低于它就跟不上实时**，会丢帧或延迟累积。
+
+**要记录的**：帧数、平均 FPS、总耗时、显存占用（`nvidia-smi`）。
+
+### 4.17 LLM 部署（Week4 三方向之一）⚠️ 未实测
+
+**目标**：跑起来一个开源 LLM，**记录显存占用和推理速度**。
+
+**选项 A：Ollama**（最简单）
+
+```bash
+ollama pull qwen2.5:1.5b
+ollama run qwen2.5:1.5b
+```
+
+**选项 B：vLLM**（接近工业用法，需要 NVIDIA 显卡）
+
+```bash
+pip install vllm
+python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen2.5-1.5B-Instruct
+```
+
+**要记录的指标：**
+
+| 指标 | 怎么测 | 单位 |
+|---|---|---|
+| 显存占用 | `nvidia-smi` | MB |
+| 加载时间 | `time` | 秒 |
+| **首 token 延迟（TTFT）** | 代码计时 | 毫秒 |
+| **生成速度** | 输出 token 数 / 耗时 | tokens/s |
+
+```python
+import time
+t0 = time.time()
+r = client.chat.completions.create(model="本地模型名",
+        messages=[{"role": "user", "content": "写一段 200 字的介绍"}])
+t1 = time.time()
+n_out = r.usage.completion_tokens
+print(f"耗时 {t1-t0:.2f}s, 输出 {n_out} tokens, 速度 {n_out/(t1-t0):.1f} tokens/s")
+```
+
+> **没有显卡 / 下载不下来**：用 API 替代，但**指标要换**——记录"不同 max_tokens 的耗时"或"并发请求的延迟"。
+> **重点是"记录指标"这个动作**，不是非要本地跑。
+
+**TTFT 和吞吐量的区别**：
+- **TTFT**（Time To First Token）= 用户等多久看到第一个字 → 影响"感觉快不快"
+- **吞吐量**（tokens/s）= 生成多快 → 影响"多久说完"
+
+### 4.18 RAG / 知识库（Week5 可选项）⚠️ 未实测
+
+**核心流程：**
+
+```
+文档 → 解析 → 切块(Chunk) → 向量化(Embedding) → 存进向量库
+                                                    ↓
+用户问题 → 向量化 → 检索(Top-k) → [重排 Rerank] → 拼进 Prompt → LLM 回答
+```
+
+**要比较的参数**（Week5 的"对比实验"）：Chunk 大小、Embedding 模型、Top-k、是否 Rerank。
+
+**文档点名的关键问题：**
+
+> **什么时候 RAG 真正有用，什么时候反而给 Agent 提供错误信息？**
+
+**这就是它和"调包"的区别**——RAG 会检索到不相关片段，然后 LLM 基于错误信息自信地胡说。**这个失败模式值得专门记录。**
+
+---
+
+## 5. 观察期第 5-6 周怎么做
+
+> 前 4 周是学技术，第 5-6 周是**把技术变成"能拿出去的东西"**。
+
+### 5.1 第 5 周：选方向 + 完成一个小模块
+
+**可选项（选一个）：**
+
+| 选项 | 难度 | 产出 |
+|---|---|---|
+| **Agent 调用日志** | ★ | 日志记录 + 统计脚本 |
+| **数据库 Tool** | ★★ | 可被 Agent 调用的数据库查询工具 |
+| **任务评价脚本** | ★★ | 自动评分脚本 |
+| **PDF 解析 Tool** | ★★ | 文档解析工具 |
+| **简单 RAG** | ★★★ | 检索服务 |
+
+**推荐：Agent 调用日志 或 数据库 Tool**——门槛低、产出明确，数据库那个顺带补了 SQL。
+
+**考核标准（文档原文）：**
+- 模块能**独立运行**
+- **输入输出明确**
+- **代码可复现**
+- **能说明该模块在整体项目中的作用**
+
+**做法：先写"接口契约"，再写代码。**
+
+```markdown
+# 模块：Agent 调用日志
+## 输入
+- Agent 每次运行的 trace（工具名、参数、结果、耗时、成功/失败）
+## 输出
+- logs/agent_run_YYYYMMDD.jsonl   每行一条记录
+- 一个统计函数：成功率、平均调用次数、平均耗时
+## 依赖
+- 无外部服务；只用标准库
+## 入口
+- python logger.py --input trace.json --summary
+```
+
+**写完契约先给别人看一眼确认边界**——避免做偏。
+
+### 5.2 第 6 周：正式考核
+
+**要交四样东西（文档原文）：**
+
+| 材料 | 要求 |
+|---|---|
+| 1. 可运行 Demo | **必须现场运行，不能只展示截图或 PPT** |
+| 2. Git 代码仓库 | 代码能运行；能说明主要目录、入口程序、依赖环境 |
+| 3. 5 页以内汇报 | 回答四问 |
+| 4. 1 页个人总结 | 最感兴趣的方向、每周可投入时间、是否愿意长期参与 |
+
+**5 页汇报的结构：**
+
+**第 1 页 · 我做了什么**
+- 6 周产出清单（每周一行）
+
+**第 2 页 · 系统怎么运行**
+- 一张架构图（手画拍照也行）
+- 入口命令
+- 关键目录说明
+
+**第 3-4 页 · 遇到什么问题、怎么解决** ← **直接抄 `notes/log.md`**
+- 挑 3–4 个最有代表性的
+- 每个写成：现象 → 排查过程 → 根因 → 解法
+
+**第 5 页 · 还有什么没完成**
+- **诚实写。** 文档说"重点考察是否真正做过、是否能解释"
+- **写清没做完什么不扣分，假装做完才扣分**
+
+**Demo 准备清单：**
+- [ ] **在考核用的机器上，提前跑一遍**
+- [ ] 准备好演示数据（不要现场下载模型/数据集）
+- [ ] 准备"现场跑挂了怎么解释"的预案
+- [ ] 确认 Git 仓库干净（没有 `.env`、没有大文件）
+
+---
+
+## 6. Bug 速查表
+
+### 6.1 ★ 你实际踩过的（最有价值）
 
 | 报错 / 现象 | 根因 | 解法 |
 |---|---|---|
@@ -916,7 +1192,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | `git remote` 里字面写着"你的用户名" | 复制模板时没替换占位符 | `git remote set-url origin 正确地址` |
 | `Enter passphrase for key ...` | 私钥设了密码短语 | 输入（**屏幕不显示字符是正常的**），或新生成一把不带密码的 |
 
-### 5.2 环境类
+### 6.2 环境类
 
 | 报错 | 根因 | 解法 |
 |---|---|---|
@@ -926,7 +1202,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | `ImportError: DLL load failed` | 缺 VC++ 运行库 | 装 Microsoft Visual C++ Redistributable |
 | 装 torch 后 `CUDA 可用: False` | 装成了 CPU 版 | 重装，**必须带 `--index-url .../whl/cu128`** |
 
-### 5.3 Python 类
+### 6.3 Python 类
 
 | 报错 | 根因 | 解法 |
 |---|---|---|
@@ -939,7 +1215,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | `UnicodeDecodeError` | 编码不对 | 试 `encoding="utf-8-sig"` / `"gbk"` |
 | `NoneType has no attribute` | 函数没 return，拿到的是 None | 检查有没有漏 `return` |
 
-### 5.4 Pandas 类
+### 6.4 Pandas 类
 
 | 报错 | 根因 | 解法 |
 |---|---|---|
@@ -950,7 +1226,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | `SettingWithCopyWarning` | 改的是筛选结果的副本 | `df = df.copy()` |
 | `Column not found` | 拿聚合结果再去分组 | 检查这一步手里到底是 df 还是聚合结果 |
 
-### 5.5 Matplotlib 类
+### 6.5 Matplotlib 类
 
 | 现象 | 根因 | 解法 |
 |---|---|---|
@@ -960,7 +1236,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | 图很小 / 文件很小 | 其实什么都没画 | **看文件大小**（<12KB 就是空的） |
 | 标题被切掉 | 没调 `tight_layout()` | `fig.tight_layout()` |
 
-### 5.6 PyTorch 类
+### 6.6 PyTorch 类
 
 | 报错 | 根因 | 解法 |
 |---|---|---|
@@ -973,7 +1249,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | 梯度越跑越大 | **忘了 `zero_grad()`** | 在 `backward()` 前清零 |
 | 加载模型报 `Missing key(s)` | 模型结构和训练时不一致 | 结构必须完全相同 |
 
-### 5.7 Git 类
+### 6.7 Git 类
 
 | 报错 | 根因 | 解法 |
 |---|---|---|
@@ -986,7 +1262,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 | `LF will be replaced by CRLF` | Windows 换行符警告 | **无害，忽略** |
 | `fatal: not a git repository` | 不在仓库目录里 | `cd E:\agent` |
 
-### 5.8 Windows / PowerShell 类
+### 6.8 Windows / PowerShell 类
 
 | 现象 | 根因 | 解法 |
 |---|---|---|
@@ -997,7 +1273,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 
 ---
 
-## 6. 卡住时的自救顺序
+## 7. 卡住时的自救顺序
 
 **按顺序做，别跳：**
 
@@ -1024,7 +1300,7 @@ SELECT a.*, b.* FROM 表A a JOIN 表B b ON a.id = b.a_id;
 
 ---
 
-## 7. 每天的最小检查
+## 8. 每天的最小检查
 
 ```powershell
 cd E:\agent
@@ -1049,7 +1325,7 @@ git push
 
 ---
 
-## 8. 三个月后回看这三条
+## 9. 三个月后回看这三条
 
 1. **面试必问「你遇到最难的问题是什么，怎么解决的」** → 答案在 `notes/log.md`
 2. **简历要有东西可写** → 靠 `week1/` ~ `week6/` 的产出
