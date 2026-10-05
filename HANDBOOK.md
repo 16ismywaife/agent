@@ -2958,6 +2958,64 @@ git push
 
 ---
 
+### ★ 怎么分清「没提交」和「被故意忽略」
+
+**这两个是完全不同的状态，但 `git status` 只显示前一个**，所以很容易误判成"我有东西没提交"。
+
+| 状态 | 例子 | `git status` 里 | 该做什么 |
+|---|---|---|---|
+| **没提交** | 你新写的脚本 | `??`（新文件）或 `M`（改过） | **要提交** |
+| **被故意忽略** | `.env`、`data.csv`、`model.pth` | **完全不显示** | **正常，别管** |
+
+**一条命令看清全部**（`--ignored` 会把被忽略的也列出来）：
+
+```powershell
+git status --short --ignored
+```
+
+输出里 `!!` 开头的就是**被故意忽略**的：
+
+```
+ M HANDBOOK.md              ← 改过，要提交
+?? week4/new.py             ← 新文件，要提交
+!! .env                     ← 被忽略（正常，密钥不该提交）
+!! week2/model.pth          ← 被忽略（正常，大文件）
+```
+
+**两条确认命令：**
+
+```powershell
+# 1. 我对不对得上远端？（两个都是 0 就是同步了）
+git fetch origin
+git rev-list --count origin/main..HEAD     # 本地领先几个
+git rev-list --count HEAD..origin/main     # 本地落后几个
+
+# 2. 某个文件为什么没出现在 status 里？
+git check-ignore -v week1/data.csv
+#  → 输出 ".gitignore:29:*.csv  week1/data.csv"
+#     读法：被 .gitignore 的 *.csv 规则挡住了（行号会变，不用记）
+#     这是【有意的】，不是忘了提交
+#  → 没有任何输出 = 它没被忽略，那它应该出现在 status 里
+```
+
+**为什么有些东西被故意排除**（这不是忘了）：
+
+| 文件 | 为什么排除 | 那别人怎么跑起来？ |
+|---|---|---|
+| `.env` | **密钥，泄露会被盗刷** | 从 `.env.example` 复制一份填自己的 |
+| `week2/model.pth` | 400 KB 二进制，换机器能重训 | 跑 `LOOP.py` 重新训练（约 2 分钟） |
+| `week1/data.csv` / `summary.csv` | 数据不该进 git（`*.csv`） | 跑 `make_data.py` 重新生成 |
+| `week2/data/` | MNIST 约 60 MB | 脚本里 `download=True` 会自动下 |
+
+> **原则：提交「生成数据的代码」，不提交「数据本身」。**
+> 这样仓库小、别人 clone 下来按 README 跑一遍就能重建。
+>
+> ⚠️ **一个副作用要知道**：`*.csv` 被全局忽略了，所以**你以后如果写了该提交的 csv**（比如一个小的配置表），
+> 它会静默不进 git。发现"文件明明在却提交不上"时，用上面的 `git check-ignore -v` 查。
+> 真要强制提交：`git add -f 文件名`（**别对 `.env` 用这个**）。
+
+---
+
 ## 9. 三个月后回看这三条
 
 1. **面试必问「你遇到最难的问题是什么，怎么解决的」** → 答案在 `notes/log.md`
