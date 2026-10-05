@@ -114,6 +114,27 @@ def build_client(api_key, base_url):
     return OpenAI(api_key=api_key, base_url=base_url)
 
 
+# ---------------------------------------------------------------- 思考模式
+# deepseek-flash 默认【开启思考】。实测（见 week3/_diag_thinking.py）发现两件必须知道的事：
+#   1. max_tokens 把【思考 token 算在内】。实测 max_tokens=100 时，
+#      100 个 token 全被思考吃掉 → 正文是空字符串、finish_reason=length。
+#      → 所以 max_tokens 要给够余量（简单任务 500 起步）。
+#   2. 思考要花钱（算在 completion_tokens 里），简单任务上纯属浪费。
+# 这一周的实验统一关掉思考，让结果干净、便宜、可复现。
+THINKING_OFF = {"thinking": {"type": "disabled"}}
+
+
+def completion(client, model, **kw):
+    """统一入口：默认关掉思考模式。
+
+    为什么要包一层：openai SDK 不认 thinking 这个字段，要经 extra_body 透传。
+    换厂商后如果对方不认这个字段，去掉 THINKING_OFF 即可 —— 不传就是默认行为。
+    """
+    extra = dict(kw.pop("extra_body", {}) or {})
+    extra.update(THINKING_OFF)
+    return client.chat.completions.create(model=model, extra_body=extra, **kw)
+
+
 def diagnose(e, base_url):
     """把 openai 的异常翻译成「你该去改哪里」。"""
     name = type(e).__name__
@@ -149,8 +170,8 @@ def diagnose(e, base_url):
 def d1_single(client, model):
     head("D1 · 单轮对话")
     t0 = time.time()
-    resp = client.chat.completions.create(
-        model=model,
+    resp = completion(
+        client, model,
         messages=[{"role": "user", "content": "用一句话解释什么是反向传播"}],
     )
     dt = time.time() - t0
@@ -171,14 +192,14 @@ def d2_prompt(client, model):
         "无角色": "把这句话改得更正式：这个方案我觉得不太行",
         "有角色（system）": None,
     }
-    r1 = client.chat.completions.create(
-        model=model,
+    r1 = completion(
+        client, model,
         messages=[{"role": "user", "content": prompts["无角色"]}],
     )
     print("【无角色】", r1.choices[0].message.content)
 
-    r2 = client.chat.completions.create(
-        model=model,
+    r2 = completion(
+        client, model,
         messages=[
             {"role": "system", "content": "你是一名严谨的技术文档编辑，只输出改写后的句子。"},
             {"role": "user", "content": prompts["无角色"]},
@@ -196,7 +217,7 @@ def d3_multi(client, model, turns=3):
 
     for q in questions:
         history.append({"role": "user", "content": q})
-        r = client.chat.completions.create(model=model, messages=history)
+        r = completion(client, model, messages=history)
         reply = r.choices[0].message.content
         history.append({"role": "assistant", "content": reply})
         print(f"\n你: {q}")
@@ -217,8 +238,8 @@ def d4_structured(client, model):
     print("--- 方式一：response_format 强制 JSON ---")
     raw = None
     try:
-        r = client.chat.completions.create(
-            model=model,
+        r = completion(
+            client, model,
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
         )
@@ -229,8 +250,8 @@ def d4_structured(client, model):
     except Exception as e:
         print(f"{WARN} json_object 不可用（{type(e).__name__}）→ 这不是你的错，换方式二")
         if raw is None:
-            r = client.chat.completions.create(
-                model=model, messages=[{"role": "user", "content": prompt}])
+            r = completion(client, model,
+                           messages=[{"role": "user", "content": prompt}])
             raw = r.choices[0].message.content
 
     print("\n--- 方式二：正则兜底（模型加了多余文字也能救） ---")
@@ -249,32 +270,58 @@ def d4_structured(client, model):
 # ---------------------------------------------------------------- D5 参数
 def d5_params(client, model):
     head("D5 · 参数实验（temperature / max_tokens）")
-    print(f"{'temperature':>12} | 3 次输出是否相同")
+
+    # ---- max_tokens：★ 先讲这个，因为它是 deepseek-flash 上最容易误解的一个 ----
+    print("--- max_tokens 的影响（★ 这里有个坑） ---")
+    print("deepseek-flash 默认开启「思考模式」，而 max_tokens 把【思考 token 也算在内】。")
+    print("思考没结束预算就没了 → finish_reason=length、正文是空字符串。\n")
+    print("★ 注意：下面这几行是【关掉思考】之后跑的（本脚本统一关掉），")
+    print("  所以你会看到 reasoning_tokens=None —— 那正说明思考确实没发生。")
+    print("  想看『思考吃掉预算』的真实样子 → python week3\\_diag_thinking.py\n")
+    print(f"{'max_tokens':>11} | {'思考token':>9} | {'正文长度':>8} | finish_reason")
+    print("-" * 62)
+    for mt in [50, 100, 500]:
+        r = completion(client, model, max_tokens=mt,
+                       messages=[{"role": "user", "content": "用三句话介绍什么是机器学习"}])
+        c = r.choices[0].message.content or ""
+        d = r.usage.completion_tokens_details
+        rt = getattr(d, "reasoning_tokens", None) if d else None
+        print(f"{mt:>11} | {str(rt):>9} | {len(c):>8} | {r.choices[0].finish_reason}")
+        print(f"   正文: {c[:70] if c else '（空！）'}")
+
+    print(f"\n{OK} 两条结论：")
+    print("   ① max_tokens 是【思考 + 正文】的总预算。开着思考时给小了 → 正文一个字都没有。")
+    print("      做 JSON 输出时尤其危险：预算被吃掉 → 你拿到空字符串 →")
+    print("      json.loads('') 报 JSONDecodeError，你会误以为是格式问题。")
+    print("   ② 关掉思考后 reasoning_tokens 是 None，【同样的钱买到更多正文】。")
+
+    # 后面的实验关掉思考，排除干扰
+    print("\n（下面统一【关掉思考模式】，让结果干净、便宜、可复现）\n")
+
+    # ---- temperature ----
+    print("--- temperature 的影响（每个温度跑 4 次，看输出是否变化） ---")
+    print("★ 注意：必须给足 max_tokens，否则正文被截成空字符串，")
+    print("  4 次\"空\"会被误判成\"输出相同\" —— 这是个很容易踩的测量陷阱。\n")
+    print(f"{'temperature':>12} | 4 次的输出")
     print("-" * 62)
     for temp in [0, 0.7, 1.5]:
         outs = []
-        for _ in range(3):
-            r = client.chat.completions.create(
-                model=model,
-                temperature=temp,
-                max_tokens=60,
-                messages=[{"role": "user", "content": "给我一个创业点子，一句话"}],
-            )
-            outs.append(r.choices[0].message.content.strip())
-        same = len(set(outs)) == 1
-        print(f"{temp:>12} | {'全部相同（确定性）' if same else f'{len(set(outs))} 种不同'}")
+        for _ in range(4):
+            r = completion(client, model, temperature=temp, max_tokens=800,
+                           messages=[{"role": "user", "content": "给我一个创业点子，一句话"}])
+            outs.append((r.choices[0].message.content or "").strip())
+        n_uniq = len(set(outs))
+        blank = sum(1 for o in outs if not o)
+        note = f"{n_uniq} 种不同"
+        if blank:
+            note += f"（⚠️ 有 {blank} 次是空的，说明 max_tokens 还是不够）"
+        print(f"{temp:>12} | {note}")
+        print(f"   例: {outs[0][:66]}")
 
-    print("\n--- max_tokens 的影响 ---")
-    for mt in [10, 100]:
-        r = client.chat.completions.create(
-            model=model, max_tokens=mt,
-            messages=[{"role": "user", "content": "用三句话介绍什么是机器学习"}],
-        )
-        c = r.choices[0].message.content
-        fin = r.choices[0].finish_reason
-        print(f"max_tokens={mt:<4} finish_reason={fin:<8} 长度={len(c)}")
-        print(f"   {c[:80]}{'…' if len(c) > 80 else ''}")
-    print(f"\n{OK} finish_reason=length 说明被 max_tokens 截断了（内容不完整）")
+    print(f"\n{OK} temperature=0 时输出仍可能不同 —— 这很正常：")
+    print("   它降低随机性，但不保证 100% 复现（GPU 浮点累加顺序、批处理都会引入差异）。")
+    print("   要完全可复现，得配合固定 seed（如果厂商支持）。")
+    print("   ★ 实践建议：要 JSON / 要结构化输出 → temperature=0；日常对话 → 0.7 左右")
 
 
 def main():

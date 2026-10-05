@@ -1401,6 +1401,42 @@ MODEL=deepseek-flash
 > **别手打 Key** —— 多一个空格就是 401，而且报错不会告诉你"你多打了空格"。
 > 用 `python week3\_set_key.py`：输入时不显示、不进命令历史。
 
+#### ★★ 思考模式：`deepseek-flash` 上最容易咬人的一个坑
+
+**`deepseek-flash` 默认【开启思考模式】。** 这会带来两个后果，实测确认（`week3/_diag_thinking.py`）：
+
+**① `max_tokens` 把【思考 token 算在内】。** 思考没结束预算就没了：
+
+| `max_tokens` | 总输出 token | 其中思考 | 正文长度 | `finish_reason` |
+|---|---|---|---|---|
+| 10 | 10 | 10 | **0（空！）** | `length` |
+| 100 | 100 | 100 | **0（空！）** | `length` |
+| 500 | 122 | 98 | 39 ✅ | `stop` |
+
+**这个坑特别阴**：做结构化输出时，预算被思考吃掉 → 你拿到**空字符串** →
+`json.loads("")` 报 `JSONDecodeError` → **你会以为是 JSON 格式问题，去改 prompt**，
+而真正的原因是 `max_tokens` 太小。**找错方向能卡一整天。**
+
+**② 思考要花钱**（算在 `completion_tokens` 里），简单任务上纯属浪费。
+
+**解决办法：关掉思考。** 用 `extra_body` 透传（openai SDK 不认这个字段）：
+
+```python
+resp = client.chat.completions.create(
+    model=os.getenv("MODEL"),
+    messages=[{"role": "user", "content": "..."}],
+    extra_body={"thinking": {"type": "disabled"}},   # ★ 关掉思考
+    #          ↑ openai SDK 不认厂商私有字段，要用 extra_body 透传
+)
+```
+
+关掉后 `reasoning_tokens` 变成 `None`，**同样的钱买到更多正文**。
+Week3 的实验统一关掉；到 Week4 做 Agent 时，**遇到需要多步推理的难题可以再开回来**。
+
+> **参考**：DeepSeek 官方文档的调用示例里带的 `"thinking": {"type": "enabled"}` +
+> `"reasoning_effort": "high"` 就是这个开关。它是**厂商私有参数**，
+> 换厂商（通义/智谱/硅基流动）后大概率不认，去掉即可。
+
 #### 单轮对话
 
 ```python
@@ -1563,8 +1599,13 @@ for temp in [0, 0.7, 1.5]:
 | 参数 | 作用 | 什么时候用 |
 |---|---|---|
 | `temperature` | 随机性（0~2） | 要 JSON/确定性 → 0；创意 → 1+ |
-| `max_tokens` | 输出长度上限 | 防止生成过长；太小会截断 |
+| `max_tokens` | 输出长度上限 | 防止生成过长；**★ 思考模式下它把思考 token 也算在内，给小了正文会是空的** |
 | `top_p` | 另一种采样控制 | 一般只调 `temperature` 就够 |
+| `extra_body={"thinking":{"type":"disabled"}}` | 关掉思考模式（厂商私有） | **省 token、结果更干净。Week3 建议一直关着** |
+
+> **实测**：`temperature=0` 时输出**仍然可能不同** —— 它降低随机性，但不保证 100% 复现
+> （GPU 浮点累加顺序、批处理都会引入差异）。要完全可复现得配合固定 seed（看厂商是否支持）。
+> **别因为"跑了 3 次不完全一样"就以为自己写错了。**
 
 ---
 
@@ -2722,7 +2763,8 @@ except APIError as e:
 | 模型答非所问 / 不调工具 | `description` 写得太含糊 | 手册 4.11：**模型就是靠描述判断该不该调**，把「什么时候用」写进去 |
 | 报错 `KeyError: '工具名'` | **模型编造了不存在的工具名** | 调之前先 `if name not in TOOLS_IMPL: 返回错误提示`（手册 4.11 五个问题之一） |
 | `content` 是 `None` 但没报错 | 这一轮模型要**调工具**，正文就是空的 | 判断 `if msg.tool_calls:`，别直接 `print(msg.content)` |
-| `json.loads(...)` 报 `JSONDecodeError` | 模型在 JSON 前后加了说明文字 | 用 `re.search(r"\{.*\}", text, re.S)` 兜底（手册 4.10） |
+| `json.loads(...)` 报 `JSONDecodeError` | ①模型在 JSON 前后加了说明文字 ②**`max_tokens` 太小，正文是空字符串** | 先 `print(repr(raw))` 确认是哪种：空字符串 → 加大 `max_tokens` 或关掉思考；有文字 → 用正则兜底 |
+| JSON 输出「被截断」/ 正文是空的 | **`max_tokens` 把思考 token 算在内**，预算被思考吃光 | 关掉思考（`extra_body={"thinking":{"type":"disabled"}}`）或把 `max_tokens` 调到 500+ |
 | `.env` 被提交上去了 | 忘了 `.gitignore` | 见 3.7 节：**Key 一旦进了 git 历史，删 commit 也删不干净**——立刻去厂商后台吊销重发 |
 | 账单突然变多 | 历史无限增长 / 没设 `max_tokens` | 手册 4.10「上下文管理」：只留最近 N 轮 |
 
