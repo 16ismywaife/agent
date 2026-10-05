@@ -61,18 +61,19 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 # ============================================================
 def evaluate():
     # 【? 第 1 处】评估前要把模型切到哪个模式？写一行（就写在这行注释下面）
-
+    model.eval()
     correct = total = 0
 
     # 【? 第 2 处】评估时不需要梯度，用哪个上下文管理器包住下面的循环？
     #             写一行 with 语句（下面的 for 已经缩进好了，你只要补这一行 + 让 for 缩进进去）
+    with torch.no_grad():
 
-    for x, y in test_ld:
-        x, y = x.to(device), y.to(device)
-        pred = model(x).argmax(dim=1)
-        correct += (pred == y).sum().item()
-        total += y.size(0)
-    return correct / total
+        for x, y in test_ld:
+            x, y = x.to(device), y.to(device)
+            pred = model(x).argmax(dim=1)
+            correct += (pred == y).sum().item()
+            total += y.size(0)
+        return correct / total
 
 
 # ============================================================
@@ -83,7 +84,7 @@ loss = None
 
 for epoch in range(6):
     # 【? 第 3 处】训练前要把模型切到哪个模式？写一行
-
+    model.train()
     for x, y in train_ld:
         x, y = x.to(device), y.to(device)
 
@@ -94,15 +95,16 @@ for epoch in range(6):
         #                  为什么第一步是"清空"而不是别的？
 
         # 第 1 步：
-
+        optimizer.zero_grad()
         # 第 2 步：
+        pred = model(x)
 
         # 第 3 步：
-
+        loss = criterion(pred, y)
         # 第 4 步：
-
+        loss.backward()
         # 第 5 步：
-
+        optimizer.step()
     acc = evaluate()
     loss_txt = "—" if loss is None else f"{loss.item():.4f}"
     #   ↑ "—" 表示"还没有 loss" —— 说明你第 3 步还没填
