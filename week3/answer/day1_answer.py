@@ -163,7 +163,7 @@ def diagnose(e, base_url):
             "请求参数不被支持。Week3 最常见的是模型不支持 response_format=json_object",
         ],
     }
-    for t in tips.get(name, ["看上面的原始信息，对照手册 6.9 节（LLM / API 类报错表）"]):
+    for t in tips.get(name, ["看上面的原始信息，对照手册 6.10 节（LLM / API 类报错表）"]):
         print(f"   → {t}")
     print("\n   环境自检能过、但调用失败，问题基本就在上面这几条里。")
 

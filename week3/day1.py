@@ -174,7 +174,7 @@ def diagnose(e, base_url):
             "请求参数不被支持。Week3 最常见的是模型不支持 response_format=json_object",
         ],
     }
-    for t in tips.get(name, ["看上面的原始信息，对照手册 6.9 节（LLM / API 类报错表）"]):
+    for t in tips.get(name, ["看上面的原始信息，对照手册 6.10 节（LLM / API 类报错表）"]):
         print(f"   → {t}")
     print("\n   环境自检能过、但调用失败，问题基本就在上面这几条里。")
 
@@ -204,7 +204,12 @@ def d1_single(client, model):
     head("D1 · 单轮对话")
 
     # TODO: 在这里写你的代码（把下面这行删掉）
-    raise NotImplementedError("d1_single 还没写")
+    t0 = time.time()
+    resp=completion(client, model,
+                    messages=[{"role":"user","content":"你好"}])
+    print(resp.choices[0].message.content)
+    print(resp.usage)
+    print(f"{time.time() - t0:.2f}s")
 
 
 def d2_prompt(client, model):
@@ -222,8 +227,16 @@ def d2_prompt(client, model):
     head("D2 · Prompt 基础（角色 + few-shot）")
 
     # TODO: 在这里写你的代码
-    raise NotImplementedError("d2_prompt 还没写")
-
+    t0 = time.time()
+    r1=completion(client, model,
+                    messages=[{"role":"system","content":"你是一名严谨的技术文档编辑，只输出改写后的句子。"},
+                              {"role":"user","content":"把这句话改得更正式：这个方案我觉得不太行"}])
+    r2=completion(client, model,messages=[{"role":"user","content":"把这句话改得更正式：这个方案我觉得不太行"}])
+    print("有角色",r1.choices[0].message.content)
+    print("无角色", r2.choices[0].message.content)
+    print(r1.usage)
+    print(r2.usage)
+    print(f"{time.time() - t0:.2f}s")
 
 def d3_multi(client, model, turns=3):
     """D3 · 多轮对话：自己维护 history 列表。
@@ -319,6 +332,8 @@ def main():
     ap = argparse.ArgumentParser(description="Week3 D1 —— 跑通第一次 LLM 调用")
     ap.add_argument("--check", action="store_true", help="只做环境自检，不发请求（不花钱）")
     ap.add_argument("--all", action="store_true", help="跑 D1~D5 全部示例")
+    ap.add_argument("--only", type=int, metavar="N",
+                    help="只跑第 N 天（1~5）。写一天时用这个，不会撞到还没写的函数")
     args = ap.parse_args()
 
     ok, api_key, base_url, model = check_env()
@@ -335,13 +350,20 @@ def main():
     client = build_client(api_key, base_url)
     print("\n下一步会真的调用 API，会产生少量 token 消耗。")
 
+    # 把「第 N 天」映射到函数。--only 用它挑一个跑，方便逐天写。
+    days = {1: d1_single, 2: d2_prompt, 3: d3_multi, 4: d4_structured, 5: d5_params}
+
     try:
-        d1_single(client, model)
-        if args.all:
-            d2_prompt(client, model)
-            d3_multi(client, model)
-            d4_structured(client, model)
-            d5_params(client, model)
+        if args.only is not None:
+            if args.only not in days:
+                print(f"{BAD} --only 只能是 1~5，你给的是 {args.only}")
+                return 2
+            days[args.only](client, model)
+        else:
+            d1_single(client, model)
+            if args.all:
+                for n in (2, 3, 4, 5):
+                    days[n](client, model)
     except NotImplementedError as e:
         print(f"\n{WARN} {e}")
         print("   → 打开 week3\\day1.py，找到这个函数，把 TODO 那段写掉。")
@@ -352,9 +374,10 @@ def main():
         return 1
 
     head("完成")
-    print(f"{OK} D1 跑通了。")
-    if not args.all:
-        print("   想看 D2~D5：填完那 4 个函数后跑 python week3\\day1.py --all")
+    print(f"{OK} 跑完了。")
+    if args.only is None and not args.all:
+        print("   逐天写代码时建议用 --only，例如： python week3\\day1.py --only 2")
+        print("   D2~D5 全跑：                    python week3\\day1.py --all")
     print("\n接下来按手册第 5 章「第 3 周」往下走：")
     print("   D2 Prompt 基础  D3 多轮对话  D4 ★ 结构化输出  D5 参数实验")
     print("\n★ 别忘了：把今天做的事写进 notes/log.md（三行就够）")
