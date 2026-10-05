@@ -23,14 +23,24 @@
 
 ## 0. 怎么用这份文件
 
-**这份文件里的代码分两种，看标记：**
+**这份文件里的代码分三种，看标记：**
 
 | 标记 | 含义 |
 |---|---|
 | ✅ **实测** | 我在你这台机器上真跑过，输出正确 |
-| ⚠️ **未实测** | 语法标准但我没法跑（比如需要 API Key），**第一次用要自己小心** |
+| ◐ **协议已验** | 代码本身真跑过（请求结构、返回解析、边界处理都对），但**当时没有 API Key**，没打过真实模型。第一次用真实 Key 时留意返回内容 |
+| ⚠️ **未实测** | 语法标准但完全没跑过（缺硬件/依赖），**第一次用要自己小心** |
 
-**遇到没写在这里的报错** → 见第 6 节「自救顺序」。
+> **◐ 是怎么验的**：我起了一个**本地 OpenAI 兼容 mock 服务器**，用**真实的 `openai` SDK**打真实 HTTP，
+> 检查了请求头、`tools` 结构、`tool_call_id` 配对、`response_format`、`temperature`、`stream` 分块——
+> **协议层是对的**。
+> **但它证明不了「真实模型会不会选你的工具」「回答质量如何」** —— 那必须用你自己的 Key 跑一次。
+> 仓库根目录有现成的验证脚本，填完 `.env` 直接跑：
+> ```powershell
+> python verify_handbook_llm.py --real
+> ```
+
+**遇到没写在这里的报错** → 见第 7 节「自救顺序」。
 
 ---
 
@@ -40,7 +50,7 @@
 ① 写日志（3 行）        notes/log.md
 ② 跑一遍自己的代码       确认还能跑
 ③ 提交                  git add / commit / push
-④ 记新坑                遇到的 bug 写进第 5 节
+④ 记新坑                遇到的 bug 写进第 6 节
 ```
 
 **第 ① 和第 ③ 是雷打不动的。** 理由见第 3 节末尾。
@@ -266,7 +276,8 @@ git commit -m "fix: analyze.py 的 --outdir 参数崩溃"
 > **这一章的读法**：
 > 1. 每段代码 **逐行都有注释**（`#` 后面就是那行在干什么）
 > 2. 代码后面有 **「关键字逐个说」表格**，解释每个写法的作用和为什么这么写
-> 3. 标 ✅ 的是我在这台机器上**实跑过**的；⚠️ 是**没跑过**的（需要 API Key 等），第一次用要小心
+> 3. 看标记：✅ **实跑过** ／ ◐ **协议已验、模型没验**（LLM/Agent 那几节，含义见第 0 节）／ ⚠️ **没跑过**
+> 4. 标记为 ◐ 的节，都配了现成的验证脚本 —— `_verify/README.md`
 
 ### 4.1 Python 基础 ✅ 实测
 
@@ -1297,9 +1308,17 @@ RuntimeError: Error(s) in loading state_dict: Missing key(s)...
 
 ---
 
-### 4.10 LLM / API 调用（Week3）⚠️ 未实测
+### 4.10 LLM / API 调用（Week3）◐ 协议已验
 
-> **我没有 API Key，跑不了这段。语法是标准的，但你第一次用要自己小心。**
+> **这一段是「协议已验」，不是「模型已验」。**
+> 我用**真实的 `openai` SDK** + 本地 mock 服务器真跑了一遍：请求头、`messages` 结构、
+> `response_format`、`temperature`、`stream` 分块、`resp.usage` **全部正确**。
+> **但没打过真实模型**（当时没有 API Key），所以「模型答得怎么样」这一层你要自己看。
+>
+> 第一次拿到 Key 后，先跑一次这个（不花钱的 mock + 你的一次真实调用）：
+> ```powershell
+> python _verify\verify_handbook_llm.py --real
+> ```
 
 #### 环境准备
 
@@ -1486,7 +1505,12 @@ for temp in [0, 0.7, 1.5]:
 
 ---
 
-### 4.11 Agent：LLM + 1 个 Tool（Week4）⚠️ 未实测（需要 API Key）
+### 4.11 Agent：LLM + 1 个 Tool（Week4）◐ 协议已验
+
+> **协议层已真跑通**：`tools` 结构、`tool_call_id` 配对、`json.loads(tc.function.arguments)`、
+> `**args` 展开、白名单校验、`eval` 清空 `__builtins__` 的防护 —— **17 项断言全过**（见 `_verify/`）。
+> **没验的**：真实模型会不会真的选这个工具、会不会编造工具名。
+> **这两件事正是你要亲眼看的**，跑 `python _verify\verify_handbook_llm.py --real` 看输出。
 
 #### ★ 先理解原理（比代码重要）
 
@@ -1968,9 +1992,17 @@ print(f"总耗时 {time.time()-t_start:.1f}s")
 
 ---
 
-### 4.17 LLM 部署（Week4 三方向之一）⚠️ 未实测
+### 4.17 LLM 部署（Week4 三方向之一）◐ 指标代码已验 / 本地推理未验
 
 **目标**：跑起来一个开源 LLM，**记录显存占用和推理速度**。
+
+> **状态拆开说**：
+> - ✅ **`r.usage.completion_tokens` 和下面那段计时代码：已验证能跑通**（走 4.10 的同一套协议）
+> - ✅ **`nvidia-smi` 看显存：你这台机器有 RTX 5060，可以直接用**（4.15 节已经用过）
+> - ⚠️ **Ollama / vLLM 本身没跑过** —— 需要下载模型（几个 GB），当时没做
+>
+> **注意**：这一段即使不装 Ollama 也能交差。手册下面写了替代方案——
+> **重点是「记录指标」这个动作，不是非要本地部署。**
 
 **选项 A：Ollama**（最简单，适合入门）
 
@@ -2037,6 +2069,14 @@ print(f"耗时 {t1-t0:.2f}s, 输出 {n_out} tokens, 速度 {n_out/(t1-t0):.1f} t
 
 ### 4.18 RAG / 知识库（Week5 可选项）⚠️ 未实测
 
+> **这一节没有可跑的代码块**（只有流程图和表格），所以没有「实测」可言。
+> ⚠️ 的真正含义是：**「Embedding + 向量检索」这条链路我没在这台机器上跑过**（需要 API Key 或本地向量库）。
+>
+> **但有个好消息**：RAG 的**骨架部分不用 API Key 也能练**——切块、Top-k 检索、拼 Prompt 这三步，
+> 用 `difflib` 或简单的词频匹配就能做出一个能跑的版本（**检索质量差，但流程一样**）。
+> 等第 5 周真要做的时候，把「向量检索」换成真实 Embedding 即可，**其余代码不用动**。
+> 这一节真正的价值在下面那张「失败模式」表 —— 那就是 Week5 对比实验要回答的问题。
+
 **核心流程**
 
 ```
@@ -2094,14 +2134,14 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 
 **总览**
 
-| 周 | 主题 | 本周交付物 |
-|---|---|---|
-| 1 | Python 与开发环境 | `week1/analyze.py` |
-| 2 | Git、Linux 与深度学习基础 | `week2/` MNIST 训练脚本 |
-| 3 | 现代 AI 模型体验 | `week3/` LLM 调用脚本 |
-| 4 | 三个方向体验 | `week4/` Agent + 部署 + Edge |
-| 5 | 选方向 + 小模块 | `week5/` 独立模块 |
-| 6 | 正式考核 | Demo + 仓库 + 5页汇报 + 1页总结 |
+| 周 | 主题 | 本周交付物 | 状态 |
+|---|---|---|---|
+| 1 | Python 与开发环境 | `week1/analyze.py` | ✅ 已完成 |
+| 2 | Git、Linux 与深度学习基础 | `week2/` MNIST 训练脚本 | ✅ 已完成（97.36%） |
+| 3 | 现代 AI 模型体验 | `week3/` LLM 调用脚本 | ⬜ 未开始 |
+| 4 | 三个方向体验 | `week4/` Agent + 部署 + Edge | ⬜ 未开始 |
+| 5 | 选方向 + 小模块 | `week5/` 独立模块 | ⬜ 未开始 |
+| 6 | 正式考核 | Demo + 仓库 + 5页汇报 + 1页总结 | ⬜ 未开始 |
 
 **每天的固定动作（不管哪天）：**
 
@@ -2176,7 +2216,7 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 > **考核重点**：**"不能只运行别人代码"**；能解释**训练集、测试集、Loss、为什么需要反向传播**
 > **交付物**：`week2/` 训练脚本 + 日志
 
-**状态：进行中**
+**状态：✅ 已完成**（交付物：`week2/LOOP.py` + `loadtest.py` + `README.md`，实测准确率 **97.36%**）
 
 #### D1 · Git 远程 ✅ 已完成
 - **学**：SSH 密钥、`git remote`、`push`/`pull`、`.gitignore`（→ 第 3 章）
@@ -2191,37 +2231,37 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 - **产出**：合并进 main 的一次提交
 - **自查**：**切分支时硬盘上的文件会跟着变**；合并完记得删本地和远端分支
 
-#### D3 · Linux 常用命令 ← **当前**
+#### D3 · Linux 常用命令 ✅ 已完成
 - **学**：`pwd`/`ls`/`cd`/`cp`/`mv`/`rm`/`cat`/`grep`/`find`/`chmod`/`ps`；管道与重定向（→ 4.14）
 - **做**：**在 Git Bash 里**把每个命令敲一遍；练习 `python x.py > log.txt 2>&1`
-- **产出**：`week2/day3_linux.md`（命令笔记 + 和 PowerShell 的区别）
+- **产出**：命令笔记已并入手册 4.14 节
 - **自查**：能说清 `~` 在 bash 和 PowerShell 里的区别；知道 `rm -rf` 为什么危险
 
-#### D4 · PyTorch Tensor 与自动求导
+#### D4 · PyTorch Tensor 与自动求导 ✅ 已完成
 - **学**：Tensor 与 NumPy 的关系；`requires_grad`；计算图；`backward()`；`.grad`；**梯度累积**（→ 4.6）
 - **做**：`x.grad` 手算对账；多变量求导；**用自动求导做梯度下降拟合 `y = 2x + 1`**
 - **产出**：`week2/day4.py`，`w` 收敛到 **2.0000**
 - **自查**：**用自己话讲"为什么需要反向传播"**（考核点名）
 - **⚠️ 常见坑**：忘了 `zero_grad()` → 梯度累积
 
-#### D5 · Dataset 与 DataLoader
+#### D5 · Dataset 与 DataLoader ✅ 已完成
 - **学**：`Dataset` vs `DataLoader` 的分工；`batch_size`；`shuffle`（→ 4.7）
 - **做**：加载 MNIST；取一个 batch 看 shape；对比 shuffle 开/关
-- **产出**：`week2/day5.py`
+- **产出**：`week2/dataset & dataloader.py`
 - **自查**：为什么**训练集要 shuffle、测试集不用**？
 - **⚠️ 常见坑**：Windows 上 `num_workers > 0` 会卡死
 
-#### D6 · MNIST 训练循环
+#### D6 · MNIST 训练循环 ✅ 已完成
 - **学**：**训练循环 5 步**：`zero_grad → forward → loss → backward → step`；`model.train()`/`eval()`；`torch.no_grad()`（→ 4.8）
-- **做**：完整训练 3 个 epoch；每轮记录 loss 和 test_acc 到 `log.txt`
-- **产出**：`week2/train_mnist.py` + `log.txt`，准确率 **85%+**
+- **做**：完整训练 3 个 epoch；每轮记录 loss 和 test_acc
+- **产出**：`week2/LOOP.py`，**实测准确率 97.36%**（RTX 5060 / 60000 张 / 110 秒）
 - **自查**：能背出 5 步；能解释 `eval()` 和 `train()` 为什么要切换
 - **⚠️ 常见坑**：loss 不下降（学习率）；显存不够（减 batch_size）
 
-#### D7 · 保存/加载模型 + 整理交付物
+#### D7 · 保存/加载模型 + 整理交付物 ✅ 已完成
 - **学**：`torch.save(state_dict)` / `load_state_dict`；`map_location`（→ 4.9）
 - **做**：保存模型 → 新建脚本加载 → 推理一张图；整理 `week2/README.md`
-- **产出**：`week2/test_load.py` + `model.pth` + `README.md`
+- **产出**：`week2/loadtest.py` + `model.pth` + `README.md`
 - **自查**：
   - [ ] 能解释**训练集/测试集/验证集**分别干什么
   - [ ] 能解释 **Loss** 是什么、为什么能衡量好坏
@@ -2485,6 +2525,7 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 | `ssh-keygen` 报 `No such file or directory` | **PowerShell 里 `~` 不展开**，传给了外部程序 | 用 `$env:USERPROFILE\.ssh\...` |
 | `git remote` 里字面写着"你的用户名" | 复制模板时没替换占位符 | `git remote set-url origin 正确地址` |
 | `Enter passphrase for key ...` | 私钥设了密码短语 | 输入（**屏幕不显示字符是正常的**），或新生成一把不带密码的 |
+| `RuntimeError: a Tensor with 784 elements cannot be converted to Scalar` | **括号位置错了**：`argmax` 作用在输入图像上，而不是模型输出上 | `model(x.unsqueeze(0)).argmax(dim=1).item()` —— 右括号要在 `x` 后面就闭合 |
 
 ### 6.2 环境类
 
@@ -2542,6 +2583,8 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 | `DataLoader` 卡死 | Windows 下 `num_workers>0` | 改成 `num_workers=0` |
 | 梯度越跑越大 | **忘了 `zero_grad()`** | 在 `backward()` 前清零 |
 | 加载模型报 `Missing key(s)` | 模型结构和训练时不一致 | 结构必须完全相同 |
+| `a Tensor with N elements cannot be converted to Scalar` | 括号位置错，`argmax`/`item` 被套进了 `model()` 里 | 写成 `out = model(x); pred = out.argmax(dim=1).item()` |
+| `RuntimeError: element 0 of tensors does not require grad` | 调了 `backward()` 但计算图已断（或删了 `requires_grad`） | 检查 `requires_grad=True`；`backward()` 和 `zero_()` 要配套 |
 
 ### 6.7 Git 类
 
@@ -2565,6 +2608,54 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 | `ssh -T git@github.com` 退出码 1 | **这是正常的**，成功也是 1 | 看输出有没有 `Hi 用户名!` |
 | 中文命令输出乱码 | 控制台代码页 | `chcp 65001` |
 
+### 6.9 LLM / API 类（Week3 起会用到）
+
+**先记住一句话**：API 报错里**最有用的是 `status_code` 和 `body` 里的 `message`**，
+不要只看 Python 抛出来的那句话。
+
+**在代码里这样看：**
+
+```python
+from openai import APIError, AuthenticationError, RateLimitError, APIConnectionError
+
+try:
+    resp = client.chat.completions.create(model=..., messages=[...])
+except AuthenticationError as e:
+    #          ↑401：Key 错了 / 没读到
+    print("Key 有问题：", e)
+except RateLimitError as e:
+    #          ↑429：太频繁 / 没额度
+    print("被限流或余额不足：", e)
+except APIConnectionError as e:
+    #          ↑连不上：base_url 写错 / 没网 / 需要代理
+    print("连不上服务器：", e)
+except APIError as e:
+    #          ↑其他：看 status_code
+    print("API 报错", e.status_code, e.message)
+```
+
+| 报错 / 现象 | 根因 | 解法 |
+|---|---|---|
+| `AuthenticationError` (401) | Key 没读到 / 填错 / 多了空格 | `print(repr(os.getenv("API_KEY")))` 看**真实值**；`load_dotenv()` 要在 `os.getenv` **之前** |
+| `APIConnectionError` | `base_url` 写错 / 少了 `/v1` / 网络不通 | 打印 `os.getenv("BASE_URL")`；国内厂商**大多要带 `/v1`** |
+| `NotFoundError` (404) | 模型名写错 | 模型名要一字不差，如 `deepseek-chat` 不是 `DeepSeek-Chat` |
+| `RateLimitError` (429) | 请求太密 / 余额为 0 | 加 `time.sleep()`；去后台看余额 |
+| `BadRequestError` (400) `response_format` | 该模型**不支持** `json_object` | 去掉这个参数，用正则兜底（手册 4.10） |
+| 模型答非所问 / 不调工具 | `description` 写得太含糊 | 手册 4.11：**模型就是靠描述判断该不该调**，把「什么时候用」写进去 |
+| 报错 `KeyError: '工具名'` | **模型编造了不存在的工具名** | 调之前先 `if name not in TOOLS_IMPL: 返回错误提示`（手册 4.11 五个问题之一） |
+| `content` 是 `None` 但没报错 | 这一轮模型要**调工具**，正文就是空的 | 判断 `if msg.tool_calls:`，别直接 `print(msg.content)` |
+| `json.loads(...)` 报 `JSONDecodeError` | 模型在 JSON 前后加了说明文字 | 用 `re.search(r"\{.*\}", text, re.S)` 兜底（手册 4.10） |
+| `.env` 被提交上去了 | 忘了 `.gitignore` | 见 3.7 节：**Key 一旦进了 git 历史，删 commit 也删不干净**——立刻去厂商后台吊销重发 |
+| 账单突然变多 | 历史无限增长 / 没设 `max_tokens` | 手册 4.10「上下文管理」：只留最近 N 轮 |
+
+> **`.env` 的四个自检**（每次动完配置跑一遍）：
+> ```powershell
+> cd E:\agent
+> Test-Path .env                      # True 说明文件在
+> git check-ignore -v .env            # 必须输出一行（说明被忽略）；没输出 = 危险
+> git status --short                  # 确认列表里【没有】.env
+> ```
+
 ---
 
 ## 7. 卡住时的自救顺序
@@ -2575,7 +2666,7 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 1. 读报错最后一行        ← 最关键的信息在这里，不是最上面那堆
 2. 用 type() / print() 看变量到底是什么
    print(type(x), x.shape if hasattr(x,'shape') else x)
-3. 查本文件第 5 节
+3. 查本文件第 6 节
 4. 报错原文搜一遍（去掉路径和内存地址）
 5. 问 AI（把完整报错 + 你的代码贴进去）
 6. 卡 2 小时以上 → 跳过这个点，先做别的

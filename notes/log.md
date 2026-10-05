@@ -73,6 +73,59 @@
 
 ---
 
+## 09-29 ~ 10-02（Week2 · Git 远程与分支）
+
+- **做了**：生成 GitHub 专用密钥 `id_ed25519_github` → 配 `~/.ssh/config` → 建仓库 → `git push`；练了分支（`switch -c` / `merge` / `branch -d`）
+- **卡了 1**：`ssh-keygen -f ~/.ssh/id_ed25519_github` 报 `Saving key "~/.ssh/id_ed25519_github" failed: No such file or directory`
+- **解了 1**：**PowerShell 里 `~` 不会展开**（它只在自己人写的 cmdlet 里展开）。ssh-keygen 是外部程序，原样收到 `~`，就把它当成文件夹名了。改用 `"$env:USERPROFILE\.ssh\id_ed25519_github"`
+- **卡了 2**：`git remote add origin git@github.com:你的用户名/agent.git` —— **占位符「你的用户名」被我原样贴上去了**
+- **现象**：`git push` 报 `Repository not found`，`git remote -v` 里字面就是「你的用户名」
+- **解了 2**：`git remote set-url origin git@github.com:16ismywaife/agent.git`（用户名是 `16ismywaife`，不是 `cheggs` —— `cheggs` 只是 git 的 `user.name`）。**学到：文档里的占位符必须先替换，`git remote -v` 是查这个的第一步**
+- **记一下**：原来的 `id_ed25519` 没动 —— 实验室服务器还在用它，新建的是 GitHub 专用钥匙
+
+---
+
+## 10-01 ~ 10-02（Week2 · Tensor 与自动求导）
+
+- **做了**：`x.grad` 手算对账；**用自动求导做梯度下降拟合 `y = 2x + 1`** → 200 轮后 `w=2.0000, b=1.0000`
+- **卡了**：验证「为什么需要反向传播」时删掉 `loss.backward()`，但循环里还留着 `w.grad.zero_()`，报错
+- **解了**：`backward()` 和 `zero_()` 要一起删 —— **没有 `backward()` 就没有 `.grad`，`zero_()` 自然没得清**
+- **★ 这个反证很值钱**：删掉 `backward()` 后 `w` 一直是 `0.0000` —— **参数一点没动**。比任何解释都能说明反向传播在干什么
+- **记一下**：梯度是**累加**不是覆盖，所以 `zero_grad()` 必须每轮都调
+
+---
+
+## 10-02（Week2 · Dataset 与 DataLoader）
+
+- **做了**：加载 MNIST（60000 / 10000）、取 batch 看 shape `[32, 1, 28, 28]`、对比 shuffle
+- **卡了**：以为 `DataLoader` 和 `Dataset` 是同一层的东西
+- **解了**：**`Dataset` 管「一条数据怎么取」，`DataLoader` 管「怎么攒成一批、要不要打乱」** —— 两层分工
+- **记一下**：**测试集不用 `shuffle`**（顺序固定结果才可复现）；Windows 上 `num_workers > 0` 会卡死
+
+---
+
+## 10-05（Week2 · MNIST 训练循环 + 保存/加载模型）★ 本周交付物
+
+- **做了**：`LOOP.py` 全量训练 3 个 epoch → **准确率 97.36%**（RTX 5060，60000 张，110 秒）；`torch.save(state_dict)` 存模型 → `loadtest.py` 加载推理，`pred: 7, label: 7` 一致
+- **卡了**：`loadtest.py` 报 `RuntimeError: a Tensor with 784 elements cannot be converted to Scalar`
+- **根因**：**括号位置错了**。我写的是
+  ```python
+  pred = model(x.unsqueeze(0).argmax(dim=1).item())   # ❌ 全在 model() 里面
+  ```
+  `argmax` 跑在**输入图像**上（在 784 个像素里找最大值），而不是在**模型输出**上。所以 `model()` 收到了一个数字，`item()` 又想把 784 个元素的张量变成标量
+- **解了**：
+  ```python
+  pred = model(x.unsqueeze(0)).argmax(dim=1).item()   # ✅ argmax 在外面，对输出做
+  ```
+- **★ 学到**：**`model(x)` 的右括号在哪结束，决定了后面所有操作作用在谁身上。** 拆成两行就不会错：
+  ```python
+  out  = model(x.unsqueeze(0))     # 先拿输出（形状 [1, 10]）
+  pred = out.argmax(dim=1).item()  # 再在输出上取类别
+  ```
+- **记一下**：`state_dict()` **只存参数不存结构**，所以加载时 `Net` 类必须和训练时一模一样，先建结构再灌参数
+
+---
+
 <!--
 往下加新的一天。三行就够：
 
