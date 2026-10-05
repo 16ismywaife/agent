@@ -127,7 +127,7 @@ def diagnose(e, base_url):
         ],
         "NotFoundError": [
             f"MODEL 名字不对，或者服务地址不对（当前 BASE_URL={base_url}）",
-            "模型名大小写敏感，比如 deepseek-chat 不是 DeepSeek-Chat",
+            "★ 网上老教程里的 deepseek-chat / deepseek-reasoner 已失效，现在用 deepseek-flash",
         ],
         "APIConnectionError": [
             f"连不上 {base_url}。检查网络 / 需不需要代理",

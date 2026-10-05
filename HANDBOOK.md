@@ -1385,11 +1385,21 @@ pip install openai python-dotenv
 ```
 API_KEY=你的密钥
 BASE_URL=https://api.deepseek.com/v1
-MODEL=deepseek-chat
+MODEL=deepseek-flash
 ```
 
+> ⚠️ **`deepseek-chat` 这个名字已经失效了**（网上老教程还在写它），现在用会直接 404。
+> DeepSeek 当前的模型名：`deepseek-flash`（便宜快，支持 JSON + Tool Calls，**Week3/4 用这个**）、
+> `deepseek-v4-pro`（更强更贵）。
+>
+> **`BASE_URL` 的 `/v1`**：官方文档写的是 `https://api.deepseek.com`（不带 `/v1`），
+> 两种都能用。**带上 `/v1` 的好处是换成别的厂商时写法一致**，所以这里统一带 `/v1`。
+>
 > ⚠️ **`.env` 必须在 `.gitignore` 里。** 泄露 = 别人拿你的额度盗刷。
 > 提交前先 `git status` 确认看不到它。
+>
+> **别手打 Key** —— 多一个空格就是 401，而且报错不会告诉你"你多打了空格"。
+> 用 `python week3\_set_key.py`：输入时不显示、不进命令历史。
 
 #### 单轮对话
 
@@ -2706,7 +2716,7 @@ except APIError as e:
 |---|---|---|
 | `AuthenticationError` (401) | Key 没读到 / 填错 / 多了空格 | `print(repr(os.getenv("API_KEY")))` 看**真实值**；`load_dotenv()` 要在 `os.getenv` **之前** |
 | `APIConnectionError` | `base_url` 写错 / 少了 `/v1` / 网络不通 | 打印 `os.getenv("BASE_URL")`；国内厂商**大多要带 `/v1`** |
-| `NotFoundError` (404) | 模型名写错 | 模型名要一字不差，如 `deepseek-chat` 不是 `DeepSeek-Chat` |
+| `NotFoundError` (404) | 模型名写错，**或用了已失效的老模型名** | 模型名要一字不差。★ `deepseek-chat` / `deepseek-reasoner` **已失效**，现在用 `deepseek-flash` |
 | `RateLimitError` (429) | 请求太密 / 余额为 0 | 加 `time.sleep()`；去后台看余额 |
 | `BadRequestError` (400) `response_format` | 该模型**不支持** `json_object` | 去掉这个参数，用正则兜底（手册 4.10） |
 | 模型答非所问 / 不调工具 | `description` 写得太含糊 | 手册 4.11：**模型就是靠描述判断该不该调**，把「什么时候用」写进去 |

@@ -37,10 +37,18 @@ notepad .env
 ```
 API_KEY=你从厂商后台复制的密钥
 BASE_URL=https://api.deepseek.com/v1
-MODEL=deepseek-chat
+MODEL=deepseek-flash
 ```
 
-> ⚠️ **`.env` 已经被 `.gitignore` 排除**，永远不会提交。但还是建议填完跑一下自检确认。
+> ⚠️ **`deepseek-chat` 已失效**（网上老教程还在写），用它会 404。
+> 当前 DeepSeek 的模型名：`deepseek-flash`（推荐）、`deepseek-v4-pro`。
+>
+> **`.env` 已经被 `.gitignore` 排除**，永远不会提交。但还是建议填完跑一下自检确认。
+>
+> **别手打 Key** —— 多一个空格就是 401，而报错不会告诉你多打了空格：
+> ```powershell
+> python week3\_set_key.py     # 输入时不显示、不进命令历史
+> ```
 
 ### 第 2 步：自检（不花钱）
 
@@ -55,7 +63,7 @@ python week3\day1.py --check
 ✅ .env 已被 .gitignore 排除（安全）
 ✅ API_KEY 已读到：sk-xxx…xxxx（长度 35）
 ✅ BASE_URL = https://api.deepseek.com/v1
-✅ MODEL = deepseek-chat
+✅ MODEL = deepseek-flash
 ```
 
 **任何一项 ❌，它会直接告诉你该改什么**，不用猜。
