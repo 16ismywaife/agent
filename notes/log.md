@@ -126,7 +126,7 @@
 
 ---
 
-## 10-06（Week3 · D1 跑通第一次 LLM 调用）
+## 10-05（Week3 · D1 跑通第一次 LLM 调用）
 
 > **这一条要分清哪些是我自己做的** —— 考核标准是「不能只运行别人代码」，
 > 混着记等于自欺欺人。下面标了出处。
@@ -134,7 +134,8 @@
 > **骨架 + 我填核心**（`week3/day1.py` 里 5 个函数体留 TODO 自己写）。
 
 - **做了**：配 `.env`（DeepSeek）→ `day1.py --check` 五项自检全过 → D1~D5 跑通
-  - （脚手架、报错诊断：AI 提供；**5 个核心函数体：待我自己填**）
+  - （脚手架、报错诊断：AI 提供；**核心函数体：d1_single / d2_prompt 已由我自己填完**，
+    d3~d5 待填）
 - **卡了 1（我自己写的代码，我自己改对的）**：`mytrain.py` 第 2 步我写成 `pred = model(x).argmax(dim=1)`，报
   `RuntimeError: Expected floating point type for target with class probabilities, got Long`
 - **解了 1**：`CrossEntropyLoss` 要的是**浮点分数** `(批,10)`，`argmax` 把它压成了 Long `(批,)`。改成 `pred = model(x)` 后 loss 2.12→0.19，精度 0.0950→0.2510。
@@ -151,6 +152,7 @@
 - **我自己的反思**：AI 一开始把 5 个函数全写好了，我差点直接收下。**读得懂 ≠ 写得出来。** 以后默认要骨架，不要成品 —— 尤其 Week4 的 Agent。
 - 卡了：只跑 1 次就下结论，得出「system 帮倒忙」，加到 5 次才推翻
 - 解了：n≥5 看分布，不看单条
+
 ---
 
 <!--
