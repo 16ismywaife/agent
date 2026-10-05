@@ -2438,6 +2438,12 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 > 2. 确认代码层面没问题 → `python _verify\verify_handbook_llm.py`（不花钱，不需要 Key）
 >
 > 然后 `copy .env.example .env` 填三个值，再 `python week3\day1.py --check` 自检。
+>
+> **进度**：D1 ✅（单轮调用）　D2 ✅（Prompt 对比，见 `prompt_compare.md`）　D3~D5 ⬜
+
+> ⚠️ **`ROADMAP-5months.md` 顶部有更正标记** —— 那份长期计划是按**大厂**标准排的，
+> 而你的第一份实习目标是**中小厂**（两者要求差别很大）。
+> **六周期间不用管它**，等观察期跑完再重排。**别照它执行。**
 
 #### D1 · 跑通第一次调用
 - **学**：API 基本用法；`.env` 管理密钥（→ 4.10）
