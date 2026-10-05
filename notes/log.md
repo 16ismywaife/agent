@@ -128,8 +128,14 @@
 
 ## 10-06（Week3 · D1 跑通第一次 LLM 调用）
 
-- **做了**：配 `.env`（DeepSeek）→ `week3/day1.py --check` 五项自检全过 → `day1.py --all` 把 D1~D5 全跑通（单轮 / Prompt / 多轮 / 结构化输出 / 参数实验）
-- **卡了 1**：`mytrain.py` 第 2 步我写成 `pred = model(x).argmax(dim=1)`，报
+> **这一条要分清哪些是我自己做的** —— 考核标准是「不能只运行别人代码」，
+> 混着记等于自欺欺人。下面标了出处。
+> 这一天一开始 AI 把整套脚本都替我写完了，我提出质疑，之后改成
+> **骨架 + 我填核心**（`week3/day1.py` 里 5 个函数体留 TODO 自己写）。
+
+- **做了**：配 `.env`（DeepSeek）→ `day1.py --check` 五项自检全过 → D1~D5 跑通
+  - （脚手架、报错诊断：AI 提供；**5 个核心函数体：待我自己填**）
+- **卡了 1（我自己写的代码，我自己改对的）**：`mytrain.py` 第 2 步我写成 `pred = model(x).argmax(dim=1)`，报
   `RuntimeError: Expected floating point type for target with class probabilities, got Long`
 - **解了 1**：`CrossEntropyLoss` 要的是**浮点分数** `(批,10)`，`argmax` 把它压成了 Long `(批,)`。改成 `pred = model(x)` 后 loss 2.12→0.19，精度 0.0950→0.2510。
   **★ 这和 Week2 那次报错是同一个根因：`argmax` 下得太早。** 记住一条规则就够了 —— **`argmax` 只用于算准确率那一步，算 loss 时绝对不能加。**
@@ -137,11 +143,12 @@
 - **解了 2**：`deepseek-flash` **默认开启思考模式**，而 **`max_tokens` 把思考 token 也算在内** —— 思考没结束预算就没了，正文一个字都吐不出来。
   **★ 这个坑最阴的地方**：做 JSON 输出时预算被吃掉 → 拿到空字符串 → `json.loads("")` 报 `JSONDecodeError` → **你会以为是自己 JSON 格式写错，去改 prompt，方向全错。**
   解决：`extra_body={"thinking": {"type": "disabled"}}` 关掉思考（SDK 不认这个字段，必须用 `extra_body` 透传）。关掉后 `reasoning_tokens` 变 `None`，**同样的钱买到更多正文**。
-- **卡了 3（我的测量方法错了，不是模型的问题）**：一开始把 D5 的 temperature 实验写成 `max_tokens=60`，结果 3 次输出全是空字符串，被判成「全部相同」，我差点得出「temperature 不起作用」的错误结论
+- **卡了 3（这个更值得记：错的是【测量方法】，不是模型）**：一开始把 temperature 实验写成 `max_tokens=60`，结果 3 次输出全是空字符串，被统计成「全部相同」，差点得出「temperature 不起作用」的**错误结论**
 - **解了 3**：把 `max_tokens` 提到 800 后重测 —— `temperature=0.7` / `1.5` 各 4 次**都产生 4 种不同输出**，**temperature 完全正常**。
-  **★ 学到：测量方法本身会制造假结论。** 「三次都一样」和「三次都是空的」在代码里长得一模一样，必须先 `print(repr(输出))` 看清内容再下判断。
+  **★ 学到：「三次都一样」和「三次都是空的」，在代码里长得一模一样。** 必须先 `print(repr(输出))` 看清内容再下判断。
   **★ 附带发现**：`temperature=0` 时输出**仍可能不同**（3 种）—— 它只是降低随机性，不保证 100% 复现。
 - **记一下**：`deepseek-chat` 这个模型名**已失效**（网上老教程还在写），现在用会 404。当前是 `deepseek-flash` / `deepseek-v4-pro`
+- **我自己的反思**：AI 一开始把 5 个函数全写好了，我差点直接收下。**读得懂 ≠ 写得出来。** 以后默认要骨架，不要成品 —— 尤其 Week4 的 Agent。
 
 ---
 

@@ -1,16 +1,30 @@
-"""Week3 · D1 —— 跑通第一次 LLM 调用（含环境自检）
+"""Week3 · D1 —— 跑通第一次 LLM 调用
 
-为什么这个脚本比手册里的三行示例长：
-  第一次配 API 最容易撞的是 401 / 404 / 连接失败，而原版示例只会甩一个
-  traceback 给你，看不出到底哪一步错了。这里把每一步都摊开，
-  出错直接告诉你「哪个环境变量不对、怎么改」。
+★★ 这个文件是【骨架】。标着 TODO 的地方要你自己写。★★
+
+分工（重要，别搞错）：
+  · 外面的部分（自检 / 报错诊断 / argparse / completion 包装）
+    是【脚手架】—— 我写好了，你不用动，也不用理解每一行。
+  · 下面 5 个函数体是【你的交付物】—— 必须你自己写。
+
+     d1_single      单轮对话，并把 token 用量打出来
+     d2_prompt      同一问题发两次：不带 system / 带 system
+     d3_multi       多轮对话，自己维护 history 列表
+     d4_structured  response_format 强制 JSON，再用正则兜底
+     d5_params      temperature / max_tokens 参数实验
+
+参考手册：4.10 LLM / API 调用（有完整解释和逐行注释）
+
+想对答案 → week3/answer/day1_answer.py
+  但先自己写。写不出来再看 —— 卡住的地方就是你的真实盲区。
 
 用法：
-  python week3\\day1.py              # 自检 + 单轮对话
-  python week3\\day1.py --check      # 只自检，不花钱
-  python week3\\day1.py --all        # 自检 + D1 到 D5 的全部示例
+  python week3\\day1.py --check      # 只自检，不花钱、不发请求（先跑这个）
+  python week3\\day1.py              # D1 单轮对话
+  python week3\\day1.py --all        # 填完 5 个函数后跑全部
 
-对应手册：4.10 LLM / API 调用
+★ 提示：先只填 d1_single，跑通 `--check` 和默认模式，再往下填。
+  一次填 5 个再调，报错会糊在一起。
 """
 import argparse
 import json
@@ -23,7 +37,10 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 
-# ---------------------------------------------------------------- 输出小工具
+# ============================================================
+# 以下到「你的交付物」为止，全是脚手架，不用改
+# ============================================================
+
 OK = "✅"
 BAD = "❌"
 WARN = "⚠️"
@@ -41,7 +58,6 @@ def check_env():
 
     ok = True
 
-    # ---------- .env 文件本身 ----------
     env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
     env_path = os.path.normpath(env_path)
     if os.path.exists(env_path):
@@ -76,7 +92,6 @@ def check_env():
 
     load_dotenv(env_path)
 
-    # ---------- 三个变量 ----------
     api_key = os.getenv("API_KEY")
     base_url = os.getenv("BASE_URL")
     model = os.getenv("MODEL")
@@ -86,7 +101,6 @@ def check_env():
         print("    常见原因：.env 里写的是 API_KEY=你的密钥（占位符没替换）")
         ok = False
     else:
-        # 只显示前后几位，不打印完整密钥
         print(f"{OK} API_KEY 已读到：{api_key[:6]}…{api_key[-4:]}（长度 {len(api_key)}）")
         if api_key != api_key.strip():
             print(f"{BAD} API_KEY 首尾有空格！这会导致 401")
@@ -118,7 +132,6 @@ def build_client(api_key, base_url):
 # deepseek-flash 默认【开启思考】。实测（见 week3/_diag_thinking.py）发现两件必须知道的事：
 #   1. max_tokens 把【思考 token 算在内】。实测 max_tokens=100 时，
 #      100 个 token 全被思考吃掉 → 正文是空字符串、finish_reason=length。
-#      → 所以 max_tokens 要给够余量（简单任务 500 起步）。
 #   2. 思考要花钱（算在 completion_tokens 里），简单任务上纯属浪费。
 # 这一周的实验统一关掉思考，让结果干净、便宜、可复现。
 THINKING_OFF = {"thinking": {"type": "disabled"}}
@@ -166,162 +179,140 @@ def diagnose(e, base_url):
     print("\n   环境自检能过、但调用失败，问题基本就在上面这几条里。")
 
 
-# ---------------------------------------------------------------- D1 单轮
+# ============================================================
+# ★★★ 你的交付物：下面 5 个函数体，全部要你自己写 ★★★
+# ============================================================
+
+
 def d1_single(client, model):
+    """D1 · 单轮对话。
+
+    要做四件事：
+      1. 记开始时间（用 time.time()）
+      2. 发一次请求 —— 用上面那个 completion() 包装，别直接调
+         client.chat.completions.create（不然你会丢掉关思考的设置）
+         · 参数：messages=[{"role": "user", "content": "用一句话解释什么是反向传播"}]
+      3. 从返回里取出正文，打印出来
+      4. 打印 token 用量，并算出耗时
+
+    返回：正文（字符串）。main() 不检查返回值，但后续函数会用到这个模式。
+
+    提示：返回对象的结构（手册 4.10 有图）
+        resp.choices[0].message.content   → 正文
+        resp.usage                        → token 用量（含 prompt_tokens / completion_tokens）
+    """
     head("D1 · 单轮对话")
-    t0 = time.time()
-    resp = completion(
-        client, model,
-        messages=[{"role": "user", "content": "用一句话解释什么是反向传播"}],
-    )
-    dt = time.time() - t0
-    reply = resp.choices[0].message.content
-    print("回答：", reply)
-    print(f"\n耗时 {dt:.2f}s")
-    print("token 用量：", resp.usage)
-    print(f"\n{OK} 第一次调用跑通了。这两件事你要能看懂：")
-    print("   resp.choices[0].message.content  → 正文")
-    print("   resp.usage                       → 花了多少 token（影响成本）")
-    return reply
+
+    # TODO: 在这里写你的代码（把下面这行删掉）
+    raise NotImplementedError("d1_single 还没写")
 
 
-# ---------------------------------------------------------------- D2 prompt
 def d2_prompt(client, model):
+    """D2 · Prompt 基础：对比「有没有 system 角色」。
+
+    要做的：
+      1. 定一个待改写的中文句子，例如 "把这句话改得更正式：这个方案我觉得不太行"
+      2. 发第一次：messages 里【只有】user
+      3. 发第二次：messages 里【先】system（比如「你是一名严谨的技术文档编辑，
+         只输出改写后的句子」）【再】user，内容完全相同
+      4. 把两次输出分别打印出来，让人一眼看出差别
+
+    为什么要做这个：手册说 system 用来"设定人设"。你要自己验证这句话是不是真的。
+    """
     head("D2 · Prompt 基础（角色 + few-shot）")
-    prompts = {
-        "无角色": "把这句话改得更正式：这个方案我觉得不太行",
-        "有角色（system）": None,
-    }
-    r1 = completion(
-        client, model,
-        messages=[{"role": "user", "content": prompts["无角色"]}],
-    )
-    print("【无角色】", r1.choices[0].message.content)
 
-    r2 = completion(
-        client, model,
-        messages=[
-            {"role": "system", "content": "你是一名严谨的技术文档编辑，只输出改写后的句子。"},
-            {"role": "user", "content": prompts["无角色"]},
-        ],
-    )
-    print("\n【有角色】", r2.choices[0].message.content)
-    print(f"\n{OK} 同样的输入，只加了一条 system，输出就变了 —— 这就是 system 的作用")
+    # TODO: 在这里写你的代码
+    raise NotImplementedError("d2_prompt 还没写")
 
 
-# ---------------------------------------------------------------- D3 多轮
 def d3_multi(client, model, turns=3):
+    """D3 · 多轮对话：自己维护 history 列表。
+
+    ★ 这一段的核心认知：模型本身没有记忆。
+      「它记得上一句」是因为你把历史【全部】传回去了。
+
+    要做的：
+      1. 建一个 history 列表，第一条是 system（例如「你是一个耐心的 Python 助教，
+         回答尽量短」）
+      2. 依次问这 3 个问题（这样第 2、3 个问题在语义上依赖前文，
+         如果历史没传对，模型会答不上来）：
+           "什么是列表推导式？"
+           "它和 map 有什么区别？"
+           "那什么时候该用哪个？"
+      3. 每一轮：
+           · 把 user 那条 append 进 history
+           · 把【整个 history】传给 API
+           · 把模型的回复也 append 进 history（否则下一轮它就"忘了"）
+      4. 最后打印 history 的长度，并说明它就是上下文管理问题的来源
+
+    最容易忘的一步：把模型回复 append 回 history。漏了的话，
+    模型下一轮看不到自己说过什么，多轮就变成单轮了。
+    """
     head("D3 · 多轮对话（历史要自己传）")
-    history = [{"role": "system", "content": "你是一个耐心的 Python 助教，回答尽量短。"}]
-    questions = ["什么是列表推导式？", "它和 map 有什么区别？", "那什么时候该用哪个？"][:turns]
 
-    for q in questions:
-        history.append({"role": "user", "content": q})
-        r = completion(client, model, messages=history)
-        reply = r.choices[0].message.content
-        history.append({"role": "assistant", "content": reply})
-        print(f"\n你: {q}")
-        print(f"AI: {reply}")
-
-    print(f"\n{OK} 现在 history 里有 {len(history)} 条消息")
-    print("   ★ 模型本身没有记忆。「它记得上一句」是因为你把历史全传回去了。")
-    print("   ★ 历史会无限增长 —— 这就是 Agent 里的「上下文管理」问题（手册 4.10）")
+    # TODO: 在这里写你的代码
+    raise NotImplementedError("d3_multi 还没写")
 
 
-# ---------------------------------------------------------------- D4 结构化
 def d4_structured(client, model):
+    """D4 · 结构化输出 ★ Agent 的地基（本周最重要的一段）
+
+    要做的两套方案：
+      方案一：response_format={"type": "json_object"} 强制模型输出合法 JSON
+              · prompt 里明确说"只输出 JSON，不要其他文字"，并给出格式
+              · 文本可以用："张小明这次数学考了 88 分，语文 92 分。"
+              · 拿到返回后用 json.loads() 解析
+              · ★ 用 try/except 包住：不是所有模型都支持这个参数
+      方案二：正则兜底 —— 模型在 JSON 前后加了说明文字时用这个救
+              · re.search(r"\\{.*\\}", 文本, re.S) 把 JSON 抠出来
+              · 注意 re.S 让 . 能匹配换行
+
+    打印时把「原始返回」也打出来 —— 你要亲眼看到模型到底吐了什么。
+
+    ★ 为什么这段最重要：Tool Calling 本质就是「让模型吐结构化输出」。
+      这一步没搞明白，Week4 的 Agent 会卡住。
+    """
     head("D4 · 结构化输出 ★ Agent 的地基")
-    text = "张小明这次数学考了 88 分，语文 92 分。"
-    prompt = (f'从下面的文本中抽取信息，只输出 JSON，不要任何其他文字。\n'
-              f'格式：{{"姓名": "", "科目": "", "分数": 0}}\n\n文本：{text}\n')
 
-    print("--- 方式一：response_format 强制 JSON ---")
-    raw = None
-    try:
-        r = completion(
-            client, model,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-        )
-        raw = r.choices[0].message.content
-        data = json.loads(raw)
-        print("解析成功：", data)
-        print(f"{OK} 这个模型支持 json_object")
-    except Exception as e:
-        print(f"{WARN} json_object 不可用（{type(e).__name__}）→ 这不是你的错，换方式二")
-        if raw is None:
-            r = completion(client, model,
-                           messages=[{"role": "user", "content": prompt}])
-            raw = r.choices[0].message.content
-
-    print("\n--- 方式二：正则兜底（模型加了多余文字也能救） ---")
-    print("原始返回：", (raw or "")[:160])
-    m = re.search(r"\{.*\}", raw or "", re.S)
-    if m:
-        print("正则抠出来：", json.loads(m.group(0)))
-        print(f"{OK} 兜底方案有效")
-    else:
-        print(f"{BAD} 正则也没抠到 JSON —— 这个模型的输出格式需要你调整 prompt")
-
-    print("\n   ★ Tool Calling 本质就是「让模型吐结构化输出」。")
-    print("     这一步学不好，第 4 周 Agent 会卡。")
+    # TODO: 在这里写你的代码
+    raise NotImplementedError("d4_structured 还没写")
 
 
-# ---------------------------------------------------------------- D5 参数
 def d5_params(client, model):
+    """D5 · 参数实验：temperature / max_tokens
+
+    两个实验都要做，而且都要【打印出让人能下结论的表格】。
+
+    实验一：temperature
+      · 试 [0, 0.7, 1.5] 三个值
+      · 每个值重复请求 4 次（同一个问题，例如"给我一个创业点子，一句话"）
+      · 统计这 4 次里有几种【不同】的输出，打印出来
+      · 你要能回答：temperature 到底改变了什么？
+
+      ⚠️ 这里有个坑，你要自己撞一次才算学会：
+         如果你把 max_tokens 设小了（比如 60），正文可能被截成【空字符串】，
+         于是 4 次"空"会被统计成"输出相同" —— 你会得出
+         「temperature 不起作用」这个【错误结论】。
+         所以：max_tokens 给足（比如 800），并且打印内容本身，
+         别只看统计数字。
+
+    实验二：max_tokens
+      · 试 [50, 100, 500] 三个值，问同一个问题（例如"用三句话介绍什么是机器学习"）
+      · 对每个值打印：返回的正文字符数、finish_reason
+      · finish_reason 的取值含义：stop = 正常说完；length = 被 max_tokens 截断
+      · 你要能回答：为什么设小了会拿到【空】正文？（提示：想想思考模式）
+
+    参考手册 4.10「参数实验」那一节。
+    """
     head("D5 · 参数实验（temperature / max_tokens）")
 
-    # ---- max_tokens：★ 先讲这个，因为它是 deepseek-flash 上最容易误解的一个 ----
-    print("--- max_tokens 的影响（★ 这里有个坑） ---")
-    print("deepseek-flash 默认开启「思考模式」，而 max_tokens 把【思考 token 也算在内】。")
-    print("思考没结束预算就没了 → finish_reason=length、正文是空字符串。\n")
-    print("★ 注意：下面这几行是【关掉思考】之后跑的（本脚本统一关掉），")
-    print("  所以你会看到 reasoning_tokens=None —— 那正说明思考确实没发生。")
-    print("  想看『思考吃掉预算』的真实样子 → python week3\\_diag_thinking.py\n")
-    print(f"{'max_tokens':>11} | {'思考token':>9} | {'正文长度':>8} | finish_reason")
-    print("-" * 62)
-    for mt in [50, 100, 500]:
-        r = completion(client, model, max_tokens=mt,
-                       messages=[{"role": "user", "content": "用三句话介绍什么是机器学习"}])
-        c = r.choices[0].message.content or ""
-        d = r.usage.completion_tokens_details
-        rt = getattr(d, "reasoning_tokens", None) if d else None
-        print(f"{mt:>11} | {str(rt):>9} | {len(c):>8} | {r.choices[0].finish_reason}")
-        print(f"   正文: {c[:70] if c else '（空！）'}")
+    # TODO: 在这里写你的代码
+    raise NotImplementedError("d5_params 还没写")
 
-    print(f"\n{OK} 两条结论：")
-    print("   ① max_tokens 是【思考 + 正文】的总预算。开着思考时给小了 → 正文一个字都没有。")
-    print("      做 JSON 输出时尤其危险：预算被吃掉 → 你拿到空字符串 →")
-    print("      json.loads('') 报 JSONDecodeError，你会误以为是格式问题。")
-    print("   ② 关掉思考后 reasoning_tokens 是 None，【同样的钱买到更多正文】。")
 
-    # 后面的实验关掉思考，排除干扰
-    print("\n（下面统一【关掉思考模式】，让结果干净、便宜、可复现）\n")
-
-    # ---- temperature ----
-    print("--- temperature 的影响（每个温度跑 4 次，看输出是否变化） ---")
-    print("★ 注意：必须给足 max_tokens，否则正文被截成空字符串，")
-    print("  4 次\"空\"会被误判成\"输出相同\" —— 这是个很容易踩的测量陷阱。\n")
-    print(f"{'temperature':>12} | 4 次的输出")
-    print("-" * 62)
-    for temp in [0, 0.7, 1.5]:
-        outs = []
-        for _ in range(4):
-            r = completion(client, model, temperature=temp, max_tokens=800,
-                           messages=[{"role": "user", "content": "给我一个创业点子，一句话"}])
-            outs.append((r.choices[0].message.content or "").strip())
-        n_uniq = len(set(outs))
-        blank = sum(1 for o in outs if not o)
-        note = f"{n_uniq} 种不同"
-        if blank:
-            note += f"（⚠️ 有 {blank} 次是空的，说明 max_tokens 还是不够）"
-        print(f"{temp:>12} | {note}")
-        print(f"   例: {outs[0][:66]}")
-
-    print(f"\n{OK} temperature=0 时输出仍可能不同 —— 这很正常：")
-    print("   它降低随机性，但不保证 100% 复现（GPU 浮点累加顺序、批处理都会引入差异）。")
-    print("   要完全可复现，得配合固定 seed（如果厂商支持）。")
-    print("   ★ 实践建议：要 JSON / 要结构化输出 → temperature=0；日常对话 → 0.7 左右")
+# ============================================================
+# 下面是入口，不用改
+# ============================================================
 
 
 def main():
@@ -351,6 +342,11 @@ def main():
             d3_multi(client, model)
             d4_structured(client, model)
             d5_params(client, model)
+    except NotImplementedError as e:
+        print(f"\n{WARN} {e}")
+        print("   → 打开 week3\\day1.py，找到这个函数，把 TODO 那段写掉。")
+        print("   → 卡住了看 week3\\answer\\day1_answer.py，或者问。")
+        return 3
     except Exception as e:
         diagnose(e, base_url)
         return 1
@@ -358,7 +354,7 @@ def main():
     head("完成")
     print(f"{OK} D1 跑通了。")
     if not args.all:
-        print("   想看 D2~D5 的完整示例：python week3\\day1.py --all")
+        print("   想看 D2~D5：填完那 4 个函数后跑 python week3\\day1.py --all")
     print("\n接下来按手册第 5 章「第 3 周」往下走：")
     print("   D2 Prompt 基础  D3 多轮对话  D4 ★ 结构化输出  D5 参数实验")
     print("\n★ 别忘了：把今天做的事写进 notes/log.md（三行就够）")
