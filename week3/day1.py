@@ -178,6 +178,15 @@ def diagnose(e, base_url):
         print(f"   → {t}")
     print("\n   环境自检能过、但调用失败，问题基本就在上面这几条里。")
 
+def ask(client, model, messages):
+    """通用调用：传什么 messages 就发什么，返回 (正文, usage)。
+
+    为什么要有它：D2~D5 全在做「改一个变量、看输出怎么变」，
+    每次都要重复那三行调用代码。抽成一个函数，实验代码才干净。
+    """
+    r = completion(client, model, messages=messages)
+    return r.choices[0].message.content, r.usage
+
 
 # ============================================================
 # ★★★ 你的交付物：下面 5 个函数体，全部要你自己写 ★★★
@@ -226,17 +235,25 @@ def d2_prompt(client, model):
     """
     head("D2 · Prompt 基础（角色 + few-shot）")
 
-    # TODO: 在这里写你的代码
     t0 = time.time()
-    r1=completion(client, model,
-                    messages=[{"role":"system","content":"你是一名严谨的技术文档编辑，只输出改写后的句子。"},
-                              {"role":"user","content":"把这句话改得更正式：这个方案我觉得不太行"}])
-    r2=completion(client, model,messages=[{"role":"user","content":"把这句话改得更正式：这个方案我觉得不太行"}])
-    print("有角色",r1.choices[0].message.content)
-    print("无角色", r2.choices[0].message.content)
-    print(r1.usage)
-    print(r2.usage)
-    print(f"{time.time() - t0:.2f}s")
+    SENT = "把这句话改得更正式：这个方案我觉得不太行"
+    SYS = "你是一名严谨的技术文档编辑。把句子改写得更正式（书面、用于工作场合），只输出改写后的句子。"
+    N = 5
+
+    print(f"每组各跑 {N} 次。★ 重点不看单条好不好，看这 {N} 次的【一致性】\n")
+
+    print("--- 无 system ---")
+    for i in range(N):
+        txt, _ = ask(client, model, [{"role": "user", "content": SENT}])
+        print(f"[{i + 1}] ({len(txt)}字) {txt}")
+
+    print("\n--- 有 system ---")
+    for i in range(N):
+        txt, _ = ask(client, model, [{"role": "system", "content": SYS},
+                                     {"role": "user", "content": SENT}])
+        print(f"[{i + 1}] ({len(txt)}字) {txt}")
+
+    print(f"\n总耗时 {time.time() - t0:.2f}s")
 
 def d3_multi(client, model, turns=3):
     """D3 · 多轮对话：自己维护 history 列表。
