@@ -14,7 +14,10 @@ print(len(train_ds))
 print(len(test_ds))
 
 train_loader = DataLoader(dataset=train_ds,batch_size=32,shuffle=True)
-test_loader = DataLoader(dataset=test_ds,batch_size=32,shuffle=True)
+test_loader = DataLoader(dataset=test_ds,batch_size=32,shuffle=False)
+#                                                        ↑★ 测试集不需要打乱：
+#                                                        评估只看总体准确率，
+#                                                        顺序固定才能让结果可复现
 
 x,y=next(iter(train_loader))
 print(x.shape)
