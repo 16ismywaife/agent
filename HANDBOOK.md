@@ -2895,6 +2895,15 @@ except APIError as e:
 | JSON 输出「被截断」/ 正文是空的 | **`max_tokens` 把思考 token 算在内**，预算被思考吃光 | 关掉思考（`extra_body={"thinking":{"type":"disabled"}}`）或把 `max_tokens` 调到 500+ |
 | `.env` 被提交上去了 | 忘了 `.gitignore` | 见 3.7 节：**Key 一旦进了 git 历史，删 commit 也删不干净**——立刻去厂商后台吊销重发 |
 | 账单突然变多 | 历史无限增长 / 没设 `max_tokens` | 手册 4.10「上下文管理」：只留最近 N 轮 |
+| `AttributeError: 'NoneType' object has no attribute 'group'` | **`re.search` 没匹配到，返回 `None`**，你却直接调 `.group(0)` | 判空：`m = re.search(...)` → `data = json.loads(m.group(0)) if m else None` |
+| 正则明明写对了却匹配不到 | **忘了 `re.S`**（默认 `.` 不匹配换行） | 多行 JSON 必须 `re.search(r"\{.*\}", text, re.S)` |
+
+> **★ 关于 `re.S` 的一个反直觉点**（实测确认）：
+> 忘了 `re.S` 时，`re.search(r"\{.*\}", 多行JSON)` **不是"只匹配一行"，而是返回 `None`** ——
+> 因为 `{` 后面紧跟的就是换行，`.` 不匹配换行，**匹配在第一个字符之后就失败了**。
+> 于是你紧接着调 `.group(0)` 就会炸 `AttributeError`，而**报错信息完全没提 `re.S`**，
+> 很容易误判成"正则写错了"。
+> **正则本身没错，是漏了标志位。** 完整示例见 `week3/_re_intro.py`。
 
 > **`.env` 的四个自检**（每次动完配置跑一遍）：
 > ```powershell
