@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import time
+from idlelib import history
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -281,7 +282,15 @@ def d3_multi(client, model, turns=3):
     head("D3 · 多轮对话（历史要自己传）")
 
     # TODO: 在这里写你的代码
-    raise NotImplementedError("d3_multi 还没写")
+    history=[{"role":"system","content":"你是一个耐心的 Python 助手。每次回答控制在 3 句话以内。"}]
+    questions=["什么是列表推导式","它和map有什么区别","那什么时候用哪个"]
+
+    for q in questions:
+        history.append({"role":"user","content":q})
+        txt,usage=ask(client, model, history)
+        history.append({"role":"assistant","content":txt})
+        print(f"question:{q},reply:{txt},usage:{usage}")
+        print(len(history))
 
 
 def d4_structured(client, model):
