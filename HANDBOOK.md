@@ -1363,6 +1363,14 @@ RuntimeError: Error(s) in loading state_dict: Missing key(s)...
 
 ### 4.10 LLM / API 调用（Week3）◐ 协议已验
 
+> **这一段的代码是「最简教学版」** —— 为了看清概念，**没包辅助函数**。
+> `week3/day1.py` 里的实际代码包了两层（`completion()` + `ask()`），
+> **原因见上方「读这一节前必看」。**
+>
+> **两种读法都对**：
+> - **想理解概念** → 看下面的最简版（没有噪音）
+> - **想知道实际怎么写的** → 看 `week3/day1.py`，或 `week3/answer/day1_answer.py`
+
 > **这一段是「协议已验」，不是「模型已验」。**
 > 我用**真实的 `openai` SDK** + 本地 mock 服务器真跑了一遍：请求头、`messages` 结构、
 > `response_format`、`temperature`、`stream` 分块、`resp.usage` **全部正确**。
@@ -1437,7 +1445,75 @@ Week3 的实验统一关掉；到 Week4 做 Agent 时，**遇到需要多步推�
 > `"reasoning_effort": "high"` 就是这个开关。它是**厂商私有参数**，
 > 换厂商（通义/智谱/硅基流动）后大概率不认，去掉即可。
 
+#### ★★ 读这一节前必看：手册示例 vs 实际代码
+
+**这一章（4.10 / 4.11）的代码是「最简教学版」** —— 目的是让概念看得清。
+**但 `week3/day1.py` 里的实际代码多包了两层**，因为要处理上面那个思考模式的坑。
+
+**两者的对应关系：**
+
+| | 手册示例 | `week3/day1.py` 实际 |
+|---|---|---|
+| 调 API | `client.chat.completions.create(...)` | `completion(client, model, ...)` |
+| 关思考 | 不传（示例里是**默认行为**） | 自动带上 `extra_body` 关掉 |
+| 发 messages | 每次自己拼 | `ask(client, model, messages, **kw)` |
+
+> **⚠️ 所以照手册示例直接跑，可能撞上思考模式把 `max_tokens` 吃光的问题。**
+> **实际代码不会** —— 因为 `completion()` 已经帮你关了。
+
+##### 实际用的两个辅助函数（`week3/day1.py`）
+
+```python
+THINKING_OFF = {"thinking": {"type": "disabled"}}
+#   ↑ 厂商私有参数，openai SDK 不认，要经 extra_body 透传
+
+def completion(client, model, **kw):
+    """统一入口：默认关掉思考模式。"""
+    extra = dict(kw.pop("extra_body", {}) or {})
+    #             ↑ 先把 extra_body 从 kw 里摘出来（没有就用 {}）
+    extra.update(THINKING_OFF)
+    #             ↑ 把「关思考」合进去
+    return client.chat.completions.create(model=model, extra_body=extra, **kw)
+    #                                                  ↑ 单独作为参数传
+    #                                                              ↑ 其余原样转交
+
+
+def ask(client, model, messages, **kw):
+    """再包一层：只取「正文 + usage」，方便做实验。"""
+    r = completion(client, model, messages=messages, **kw)
+    return r.choices[0].message.content, r.usage
+```
+
+**为什么要包三层？**
+
+| 层 | 解决什么 |
+|---|---|
+| `client.chat.completions.create` | SDK 本身 |
+| **`completion()`** | SDK 不认厂商私有字段 → 统一经 `extra_body` 关掉思考 |
+| **`ask()`** | D2~D5 都在做「改一个变量、看输出怎么变」，每次重复三行调用很啰嗦 |
+
+**`**kw` 是什么意思**（手册第 4 章没讲过，这里补）：
+
+```python
+def f(**kw):        # 收集任意【关键字】参数，得到一本字典
+    return kw
+f(x=1, y=2)         # → {'x': 1, 'y': 2}
+
+# 反过来：把字典【摊开】成关键字参数
+d = {"a": 1, "b": 2}
+f(**d)              # 等价于 f(a=1, b=2)
+```
+
+**这样 D4 传 `response_format`、D5 传 `temperature`，都不用改函数签名。**
+
+> **⚠️ 一个坑**：`**kw` 只收**关键字**参数。`ask(client, model, messages, format)`
+> 里第 4 个位置参数会报 `TypeError: takes 3 positional arguments but 4 were given`。
+> 要写成 `ask(..., response_format={...})`。
+
 #### 单轮对话
+
+> **最简版**。`week3/day1.py` 的实际版是 `d1_single()`，
+> 把下面那个 `client.chat.completions.create` 换成了 `completion()`（自动关思考）。
 
 ```python
 import os
@@ -1486,6 +1562,11 @@ print("tokens:", resp.usage)
 | `resp.usage` | token 用量 | 算成本用 |
 
 #### 多轮对话
+
+> **最简版**。实际版是 `week3/day1.py` 的 `d3_multi()`，用 `ask()` 发请求。
+> **★ 有个坑实际代码里踩过**：把模型回复 append 回 history 时，`role` 要写 `assistant`
+> 不是 `system`（写成 `system` 不报错、答案还对，但语义错了）。
+> 详见 `week3/multiturn_notes.md` 第四节。
 
 ```python
 history = [{"role": "system", "content": "你是一个耐心的 Python 助教。"}]
@@ -1573,6 +1654,14 @@ reply = ask(...)      # 无 system：这次 "该方案尚不可行。"
 
 #### 结构化输出 ★ Agent 的地基
 
+> **最简版**。实际版是 `week3/day1.py` 的 `d4_structured()`（用 `ask(..., response_format=...)`）。
+> **实测有一条比"能不能解析"更重要**：`response_format` 只保证**语法**合法，
+> **不保证 schema** —— 实测 5 次调用的字段名和结构各不相同。
+> **完整数据见 `week3/structured_output_notes.md`。**
+>
+> **另一条**：`re.S` 忘了不是"只匹配一行"，而是**返回 `None`**，
+> 然后 `.group(0)` 报 `AttributeError`（报错完全不提 `re.S`）。
+
 ```python
 prompt = """从下面的文本中抽取信息，只输出 JSON，不要任何其他文字。
 格式：{"姓名": "", "科目": "", "分数": 0}
@@ -1622,6 +1711,14 @@ data = json.loads(m.group(0)) if m else None
 
 #### 参数实验
 
+> **最简版**。实际版是 `week3/day1.py` 的 `d5_params()`。
+> **实测结论（`week3/params_notes.md`）**：
+> - `temperature` 0 → 1 种输出；0.7 → 3 种；1.5 → 4 种（连发 10 次验证：0 是逐字相同）
+> - `max_tokens` 50 → `finish_reason=length`（正文 88 字符，**被截断但有内容**）；
+>   100/500 → `stop`
+> - **★ 光看 `content` 分不出"完整"和"被截断"，必须看 `finish_reason`**
+> - **★ 同一个 `max_tokens`，思考开着和关掉表现完全不同**（见上方思考模式那节）
+
 ```python
 for temp in [0, 0.7, 1.5]:
     for _ in range(3):
@@ -1648,13 +1745,35 @@ for temp in [0, 0.7, 1.5]:
 | `top_p` | 另一种采样控制 | 一般只调 `temperature` 就够 |
 | `extra_body={"thinking":{"type":"disabled"}}` | 关掉思考模式（厂商私有） | **省 token、结果更干净。Week3 建议一直关着** |
 
-> **实测**：`temperature=0` 时输出**仍然可能不同** —— 它降低随机性，但不保证 100% 复现
-> （GPU 浮点累加顺序、批处理都会引入差异）。要完全可复现得配合固定 seed（看厂商是否支持）。
-> **别因为"跑了 3 次不完全一样"就以为自己写错了。**
+> **实测（n=10）**：**`temperature=0` 时输出高度确定** —— 同一问题连发 10 次**逐字相同**。
+> （`week3/_diag_temp0.py` 可复现；详细数据见 `week3/params_notes.md` 第一节）
+>
+> ⚠️ **一条被推翻的旧说法**：本手册早先写过「`temperature=0` 时输出仍可能不同」——
+> **那是错的**。错因是那次测量用了 `max_tokens=60`（太小），正文被截断或变空，
+> **那"3 种不同"是截断产物，不是温度差异。**
+> **只测了一个模型**（`deepseek-flash`），换模型不保证绝对一致，所以：
+> **要确定性、要 JSON → 用 `temperature=0`。**
 
 ---
 
 ### 4.11 Agent：LLM + 1 个 Tool（Week4）◐ 协议已验
+
+> **⚠️ 这一段是「最简教学版」，而且它的定位和 4.10 不同** ——
+> 它是 **Week4 的目标形态**，**你还没写**。所以它和实际代码**还没有出入**
+> （Week4 写完后再来核对一次）。
+>
+> **已知的接口事实**（用真实 API 实测过，见 `week3/_peek_tool_calls.py`）：
+>
+> | 事实 | 说明 |
+> |---|---|
+> | `finish_reason` 变成 **`tool_calls`** | 不再是 `stop` |
+> | **`msg.content` 是空字符串** | 它话说一半改去要工具了。**别急着 `print(msg.content)`** |
+> | **`tc.function.arguments` 是【字符串】** | `'{"expression": "..."}'`，要 `json.loads` 才变字典 |
+> | 执行后发回结果**必须带 `tool_call_id`** | 否则模型对不上号 |
+>
+> **和 Week3 的关系**：新的只有 3 个 —— `tools=` 参数、`tool_calls` 字段、
+> 把「要工具 → 执行 → 发回 → 再问」串成**循环**。
+> 其余（`json.loads`、`**字典`、`messages` 列表、`finish_reason`）**Week3 全写过。**
 
 > **协议层已真跑通**：`tools` 结构、`tool_call_id` 配对、`json.loads(tc.function.arguments)`、
 > `**args` 展开、白名单校验、`eval` 清空 `__builtins__` 的防护 —— **17 项断言全过**（见 `_verify/`）。
