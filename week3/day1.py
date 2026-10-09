@@ -179,13 +179,13 @@ def diagnose(e, base_url):
         print(f"   → {t}")
     print("\n   环境自检能过、但调用失败，问题基本就在上面这几条里。")
 
-def ask(client, model, messages):
+def ask(client, model, messages,**kw):
     """通用调用：传什么 messages 就发什么，返回 (正文, usage)。
 
     为什么要有它：D2~D5 全在做「改一个变量、看输出怎么变」，
     每次都要重复那三行调用代码。抽成一个函数，实验代码才干净。
     """
-    r = completion(client, model, messages=messages)
+    r = completion(client, model, messages=messages,**kw)
     return r.choices[0].message.content, r.usage
 
 
@@ -314,7 +314,23 @@ def d4_structured(client, model):
     head("D4 · 结构化输出 ★ Agent 的地基")
 
     # TODO: 在这里写你的代码
-    raise NotImplementedError("d4_structured 还没写")
+    text="张小明这次数学考了 88 分，语文 92 分。"
+    prompt=(f'从下面的文本中抽取信息，只输出 JSON，不要任何其他文字。\n'
+              f'格式：{{"姓名": "", "科目": "", "分数": 0}}\n\n文本：{text}\n')
+    txt=None
+    try:
+        txt,usage=ask(client,model, [{"role":"user","content":prompt}], response_format={"type":"json_object"})
+        print(f"reply:{txt},usage:{usage}")
+    except Exception as e:
+        print("不支持 response_format：", e)
+
+    print("原始返回:", repr(txt))  # ← 缩进回到函数层
+    m = re.search(r"\{.*\}", txt or "", re.S)  # ← txt 可能是 None
+    if m:
+        print("兜底解析成功：", json.loads(m.group(0)))
+    else:
+        print("正则也没抠到 —— 只能重试或改 prompt")
+
 
 
 def d5_params(client, model):

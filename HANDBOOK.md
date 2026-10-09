@@ -2470,8 +2470,13 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 #### D4 · 结构化输出 ★ Agent 的地基
 - **学**：让模型输出 JSON；`response_format`；正则兜底
 - **做**：从一段文本抽取信息成 JSON；故意触发一次解析失败并处理
-- **产出**：`week3/llm_json.py`
-- **自查**：**能稳定拿到可解析的 JSON**；知道模型会加解释文字导致 `json.loads` 失败
+- **产出**：`week3/structured_output_notes.md` ✅
+- **自查**：
+  - [ ] **能稳定拿到可解析的 JSON**；知道模型会加解释文字导致 `json.loads` 失败
+  - [ ] 知道 `re.S` 为什么不能忘（忘了是**返回 `None`**，不是"匹配一行"）
+  - [ ] ★ 做一次 **2×2 对照**：措辞明确/含糊 × 软约束/硬约束。实测结论：
+        **明确措辞时软约束就够（5/5）；含糊措辞时软约束只有 1/5，且失败方式全是"套 markdown 代码块"**
+  - [ ] ★ 知道 **`response_format` 只管语法、不管 schema**（字段名和结构它保证不了）
 - **为什么重要**：**Tool Calling 本质就是"让模型吐结构化输出"**，D4 学不好第 4 周会卡
 
 #### D5 · 参数实验
@@ -2740,6 +2745,7 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 | `ax.bar=(x, y)` 不报错但图是空白 | **写成了赋值不是调用**，把方法覆盖成了元组 | 去掉等号：`ax.bar(x, y)` |
 | 加 `color=` 报语法错误 | 因为上面那行是赋值，`color=` 跑到元组里了 | 先修掉等号 |
 | `fig.savefig("out_path")` 存成怪名字 | **变量加了引号变成字面字符串** | 去掉引号：`fig.savefig(out_path)` |
+| ★ **`content: "prompt"` 报 `Prompt must contain the word 'json'`** | **同一个根因：变量加了引号**，实际发出去的正文就是 `prompt` 这四个字母 | 去掉引号：`content: prompt`。**排查口诀见下** |
 | `else` 返回 `None`（嵌套函数） | 函数里又 `def` 了一个同名函数，外层什么都没干 | 删掉外层，只留一个 |
 | `Column not found: 分数` | `st` 已经是 `.agg()` 的结果，**没有"分数"这一列** | 用原 `df`，或 `st["mean"]` |
 | `TypeError: unsupported format string passed to numpy.ndarray` | `s.values` 是**二维**的，遍历出来是整行 | `enumerate(s["mean"])` 或把 `s` 变成 Series |
@@ -2749,6 +2755,40 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 | `git remote` 里字面写着"你的用户名" | 复制模板时没替换占位符 | `git remote set-url origin 正确地址` |
 | `Enter passphrase for key ...` | 私钥设了密码短语 | 输入（**屏幕不显示字符是正常的**），或新生成一把不带密码的 |
 | `RuntimeError: a Tensor with 784 elements cannot be converted to Scalar` | **括号位置错了**：`argmax` 作用在输入图像上，而不是模型输出上 | `model(x.unsqueeze(0)).argmax(dim=1).item()` —— 右括号要在 `x` 后面就闭合 |
+
+### ★ 一条通用排查口诀（从"变量加引号"那个坑总结的）
+
+**6.1 表里有两条是同一个根因**：`fig.savefig("out_path")` 和 `content: "prompt"`。
+**都是"给变量加了引号 → 它不再是变量，而是一串固定文字"。**
+
+**第二个尤其难查，因为报错完全指向别处：**
+
+```python
+content: "prompt"     →  400: Prompt must contain the word 'json' in some form
+content: prompt       →  ✅
+```
+
+**报错说"你的 prompt 里没有 json"，而你以为 `prompt` 就是那段话（确实有 json）。**
+从 API 的角度它没错 —— 它确实收到了一条合法消息，只是内容是 `prompt` 这四个字母。
+
+> ### 口诀
+> **报错说「你没给 X」时，先确认 X 实际发出去的是什么，
+> 而不是检查你【写的】X 对不对。**
+>
+> **做法就一行：**
+> ```python
+> print(repr(X))          # ★ repr 会显示引号
+> print("普通 print:", X)  # ← 看不出引号，所以看不出问题
+> ```
+>
+> ```
+> repr("prompt")   ->  'prompt'          ← 一眼看出：是字符串，不是变量
+> repr(prompt)     ->  '从下面的文本中抽取信息...'   ← 这才是那段话
+> ```
+
+**为什么 `repr()` 是关键**：`print()` 输出的 `prompt` 和 `从下面的文本...` 都只是一串字，
+**看不出哪个是"变量求值的结果"、哪个是"字面的四个字母"**。
+`repr()` 会把字符串**用引号包起来**，所以两者一眼可分。
 
 ### 6.2 环境类
 
