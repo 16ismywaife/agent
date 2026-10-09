@@ -2431,7 +2431,14 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 > **考核重点**：能改变输入和参数、保存结果，并**解释模型的输入与输出**
 > **交付物**：`week3/` LLM 调用脚本 + 参数实验记录
 
-**状态：⬜ 未开始**（`week3/day1.py` 已备好 —— 是「环境自检 + D1~D5 示例」的一体脚本）
+**状态：✅ D1~D5 全部完成**（`week3/day1.py` 里 5 个函数体全部由自己填写）
+**产出**：`prompt_compare.md`(D2) / `multiturn_notes.md`(D3) / `structured_output_notes.md`(D4) / `params_notes.md`(D5)
+**剩余**：D6 保存与整理、D7 收尾自查
+
+> **D1~D5 的踩坑总结**（`notes/log.md` 有完整记录）：
+> **卡最久的不是知识点，是脚手架语法** —— D4 那 5 轮全是 `**kw`/参数顺序/引号之类。
+> **知识点只有 3 条**：① system 是「输出契约」不是「人设」
+> ② `response_format` 只管语法、不管 schema ③ 「测量方法的缺陷」会变成「错误结论」（同类错误踩了 3 次）
 
 > **开跑前先做两件事**（`week3/practice_train_loop/`）：
 > 1. 训练循环还记不牢 → 先做 `mytrain.py` 填空，再跑 `breakdown.py` 看"缺了会怎样"
@@ -2439,13 +2446,13 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 >
 > 然后 `copy .env.example .env` 填三个值，再 `python week3\day1.py --check` 自检。
 >
-> **进度**：D1 ✅（单轮调用）　D2 ✅（Prompt 对比，见 `prompt_compare.md`）　D3~D5 ⬜
+> **进度**：D1 ✅　D2 ✅　D3 ✅　D4 ✅　D5 ✅　← Week3 主线完成
 
 > ⚠️ **`ROADMAP-5months.md` 顶部有更正标记** —— 那份长期计划是按**大厂**标准排的，
 > 而你的第一份实习目标是**中小厂**（两者要求差别很大）。
 > **六周期间不用管它**，等观察期跑完再重排。**别照它执行。**
 
-#### D1 · 跑通第一次调用
+#### D1 · 跑通第一次调用 ✅ 已完成
 - **学**：API 基本用法；`.env` 管理密钥（→ 4.10）
 - **做**：选一个 OpenAI 兼容服务 → 写 `.env` → **确认 `.env` 在 `.gitignore` 里** → 跑通一次对话
 - **产出**：`week3/day1.py`（**已备好**，直接跑）+ `.env`
@@ -2455,19 +2462,19 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
 - **⚠️ 关键**：密钥泄露 = 被盗刷。先确认 `.gitignore` 再加文件
 - **★ 省事提示**：`day1.py` 内置了 401 / 404 / 连接失败的中文诊断。报错时它会直接告诉你**该去改哪个变量**，不用自己猜
 
-#### D2 · Prompt 基础
+#### D2 · Prompt 基础 ✅ 已完成
 - **学**：system 角色设定、明确指令、**少样本示例（few-shot）**、思维链
 - **做**：同一问题做 3 组对比（有/无 system、有/无示例、直接问/先分析）
 - **产出**：`week3/prompt_compare.md`（3 组对比记录）
 - **自查**：能说出 few-shot 为什么有效
 
-#### D3 · 多轮对话
+#### D3 · 多轮对话 ✅ 已完成
 - **学**：**模型没有记忆**，多轮靠把 `messages` 历史全部传回去
 - **做**：写一个命令行聊天循环；观察 `messages` 怎么增长
 - **产出**：`week3/llm_chat.py`
 - **自查**：能说出**历史无限增长会导致什么问题**（token 变多、成本上升、超上下文限制）
 
-#### D4 · 结构化输出 ★ Agent 的地基
+#### D4 · 结构化输出 ★ Agent 的地基 ✅ 已完成
 - **学**：让模型输出 JSON；`response_format`；正则兜底
 - **做**：从一段文本抽取信息成 JSON；故意触发一次解析失败并处理
 - **产出**：`week3/structured_output_notes.md` ✅
@@ -2479,11 +2486,24 @@ RAG 会检索到**不相关的片段**，然后 LLM 基于错误信息**自信�
   - [ ] ★ 知道 **`response_format` 只管语法、不管 schema**（字段名和结构它保证不了）
 - **为什么重要**：**Tool Calling 本质就是"让模型吐结构化输出"**，D4 学不好第 4 周会卡
 
-#### D5 · 参数实验
-- **学**：`temperature` / `max_tokens` / `top_p`
-- **做**：固定 prompt，改参数跑多次，记录差异到 CSV
-- **产出**：`week3/param_exp.csv`
-- **自查**：`temperature=0` 适合什么场景（要确定性、要 JSON）
+#### D5 · 参数实验 ✅ 已完成
+- **学**：`temperature` / `max_tokens` / `top_p`；**`finish_reason`**
+- **做**：固定 prompt，改参数跑多次，记录差异
+- **产出**：`week3/params_notes.md` ✅
+  （原计划是 `param_exp.csv`，实际用 md 记录了——见下方自查项的说明）
+- **自查**：
+  - [ ] `temperature=0` 适合什么场景（要确定性、要 JSON）
+  - [ ] ★ 知道 **`finish_reason`** 是什么：`stop`=正常说完 / **`length`=被 max_tokens 截断** / **`tool_calls`=模型要调工具**
+  - [ ] ★ **光看 `content` 分不出"完整"和"被截断"**，必须看 `finish_reason`
+  - [ ] ★ 实测数据：`max_tokens` 50→`length`（正文 88 字，说到一半）/ 100、500→`stop`
+  - [ ] ★ `temperature=0` **实测 10 次输出逐字相同**（高度确定，但只测了一个模型）
+- **⚠️ 与 D1 的差别**：D1 跑 `--all` 时思考**开着**，`max_tokens=100` 拿到**空字符串**；
+  D5 思考**关掉**，`max_tokens=50` 拿到 88 字（截断但有内容）。
+  **同一个参数，因为思考模式不同，表现完全不同。**
+
+> **★ 关于 `finish_reason` 的重要性**：它在 Week3 是"检查有没有被截断"，
+> **到 Week4 会变成"控制程序走哪条路"** —— Agent 主循环就靠它（或 `msg.tool_calls`）
+> 判断"该执行工具还是该结束"。**现在就要看懂它。**
 
 #### D6 · 保存与整理
 - **做**：所有脚本整理进 `week3/`；每个都能独立跑；写 README
@@ -2935,6 +2955,7 @@ except APIError as e:
 | JSON 输出「被截断」/ 正文是空的 | **`max_tokens` 把思考 token 算在内**，预算被思考吃光 | 关掉思考（`extra_body={"thinking":{"type":"disabled"}}`）或把 `max_tokens` 调到 500+ |
 | `.env` 被提交上去了 | 忘了 `.gitignore` | 见 3.7 节：**Key 一旦进了 git 历史，删 commit 也删不干净**——立刻去厂商后台吊销重发 |
 | 账单突然变多 | 历史无限增长 / 没设 `max_tokens` | 手册 4.10「上下文管理」：只留最近 N 轮 |
+| 回答"看着正常"但其实是半句 | **没检查 `finish_reason`** | `finish_reason=length` = 被 `max_tokens` 截断。**光看 `content` 分不出完整和截断** |
 | `AttributeError: 'NoneType' object has no attribute 'group'` | **`re.search` 没匹配到，返回 `None`**，你却直接调 `.group(0)` | 判空：`m = re.search(...)` → `data = json.loads(m.group(0)) if m else None` |
 | 正则明明写对了却匹配不到 | **忘了 `re.S`**（默认 `.` 不匹配换行） | 多行 JSON 必须 `re.search(r"\{.*\}", text, re.S)` |
 

@@ -362,7 +362,28 @@ def d5_params(client, model):
     head("D5 · 参数实验（temperature / max_tokens）")
 
     # TODO: 在这里写你的代码
-    raise NotImplementedError("d5_params 还没写")
+    print("--- temperature 的影响 ---")
+    for t in [0, 0.7, 1.5]:
+        outs = []
+        for _ in range(4):
+            txt, _ = ask(client, model,
+                         [{"role": "user", "content": "给我一个创业点子，一句话"}],
+                         temperature=t, max_tokens=800)
+            # 【TODO 1】把 txt 收进 outs
+            outs.append(txt)
+        # 【TODO 2】打印：t、有几种不同输出、举一个例子
+        print(t,len(set(outs)),outs[0])
+    # ============ 实验二：max_tokens ============
+    print("--- max_tokens 的影响 ---")
+    for mt in [50, 100, 500]:
+        #【TODO 3】在这里调 completion()
+        r=completion(client,model,messages=[{"role":"user","content":"用三句话介绍什么是机器学习"}],max_tokens=mt)
+        # 【TODO 4】在这里打印
+        c=r.choices[0].message.content or ""
+        print(mt,len(c),r.choices[0].finish_reason)
+
+
+
 
 
 # ============================================================
