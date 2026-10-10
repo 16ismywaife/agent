@@ -1,0 +1,13 @@
+{
+  "model": "qwen3.5:4b",
+  "cold_load_s": 4.62015700340271,
+  "hot_total_s": 2.5819036960601807,
+  "completion_tokens": 200,
+  "throughput_tps": 77.46222305083926,
+  "ttft_ms_list": [],
+  "ttft_ms_median": null,
+  "text_preview": "",
+  "vram_before_mib": 4997,
+  "vram_after_mib": 4982,
+  "vram_delta_mib": -15
+}
