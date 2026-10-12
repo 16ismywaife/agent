@@ -164,7 +164,14 @@ def calculator(expression: str) -> str:
     返回：结果的字符串形式，或错误说明
     """
     # TODO: 在这里写你的代码
-    raise NotImplementedError("calculator 还没写")
+    allowed=set("0123456789+-*/(). %")
+    if not set(expression) <= allowed:
+        return "错误，含未知字符"
+    try:
+        return str(eval(expression, {"__builtins__": {}}, {}))
+    except Exception as e:
+        return f"计算错误{e}"
+
 
 
 # ---------------------------------------------------------------- D1 第二件
@@ -172,32 +179,29 @@ def calculator(expression: str) -> str:
 TOOLS_IMPL = {
     # TODO: 把 calculator 注册进来
     #       提示：{"calculator": calculator}
+    "calculator": calculator,
 }
 
 # ★ 工具描述：告诉模型「有哪些工具可用、什么时候该用」
 #   模型就是靠这份描述决定调不调工具的 —— 所以 description 要写清楚
 TOOLS_SPEC = [
     # TODO: 按下面的结构写（这是 OpenAI function-calling 的标准格式）
-    #
-    # {
-    #     "type": "function",
-    #     "function": {
-    #         "name": "calculator",
-    #         "description": "计算数学表达式。当用户需要做算术运算时调用。",
-    #         #              ↑ ★ 这句最关键：模型靠它判断"什么时候该用"
-    #         #                写太含糊 → 模型该调的时候不调
-    #         "parameters": {
-    #             "type": "object",
-    #             "properties": {
-    #                 "expression": {
-    #                     "type": "string",
-    #                     "description": "要计算的数学表达式，例如 '(23*7+15)/2'",
-    #                 }
-    #             },
-    #             "required": ["expression"],   # ← 哪些参数必填
-    #         },
-    #     },
-    # }
+    {"type":"function",
+     "function":{
+         "name":"calculator",
+         "description":"计算数学表达式。当用户需要做算术运算时调用。",
+         "parameters":{
+             "type":"object",
+             "properties":{
+                 "expression":{
+                     "type":"string",
+                     "description":"要计算的数学表达式，例如 '(23*7+15)/2'",
+                 }
+             },
+             "required":["expression"],
+         },
+     },
+     }
 ]
 
 

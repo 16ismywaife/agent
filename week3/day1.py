@@ -32,7 +32,6 @@ import os
 import re
 import sys
 import time
-from idlelib import history
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
