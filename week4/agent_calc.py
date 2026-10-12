@@ -27,6 +27,7 @@ import sys
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
+from datetime import datetime
 
 # ============================================================
 # 以下到「你的交付物」为止，全是脚手架，不用改
@@ -172,6 +173,8 @@ def calculator(expression: str) -> str:
     except Exception as e:
         return f"计算错误{e}"
 
+def get_time()->str:
+    return datetime.now().astimezone().isoformat()
 
 
 # ---------------------------------------------------------------- D1 第二件
@@ -180,6 +183,7 @@ TOOLS_IMPL = {
     # TODO: 把 calculator 注册进来
     #       提示：{"calculator": calculator}
     "calculator": calculator,
+    "get_time":get_time
 }
 
 # ★ 工具描述：告诉模型「有哪些工具可用、什么时候该用」
@@ -201,7 +205,19 @@ TOOLS_SPEC = [
              "required":["expression"],
          },
      },
-     }
+     },
+    {"type":"function",
+     "function":{
+         "name":"get_time",
+         "description":"获取当前时间，当用户询问你当前时间时调用",
+         "parameters":{
+             "type":"object",
+             "properties":{},
+             "required": [],
+
+         },
+     },
+     },
 ]
 
 
