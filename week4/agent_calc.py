@@ -23,6 +23,7 @@ import argparse
 import json
 import os
 import sys
+from email import message
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -223,8 +224,60 @@ TOOLS_SPEC = [
 
 # ---------------------------------------------------------------- D2 主循环
 def run_agent(client, model, question, max_steps=5):
-    """D2 才写。D1 只用 --sanity 看模型的返回。"""
-    raise NotImplementedError("run_agent 还没写（D2 的任务）")
+    """D2 ★ 本周重点 · Agent 主循环。
+
+    要做的事（手册 4.11 有完整代码和逐行注释）：
+      1. 先建 messages，两条：
+           {"role": "system", "content": "……需要算术时调用 calculator，不要自己心算"}
+           ↑ ★ 为什么 system 里要加这句？你的工具 description 只管"我是什么"，
+             这句管"你必须用它、别自己算" —— 少了它模型会选择硬算
+           {"role": "user", "content": question}
+      2. for step in range(max_steps):        ← ★ 为什么要这个上限？（自查第 3 条）
+      3. 循环里发请求：走 completion(...)，参数带 tools=TOOLS_SPEC
+      4. 取 msg = r.choices[0].message，★ 先把它 append 进 messages
+           （不 append 的话，下一轮模型不知道"我刚才已经要调工具了"）
+      5. ★ 出口：msg 没有 tool_calls（空列表或 None）→ 它要直接回答 → return msg.content
+      6. 否则遍历 msg.tool_calls，对每个 tc：
+           name   = tc.function.name
+           args   = json.loads(tc.function.arguments)   ← ★ 字符串 → 字典
+           result = TOOLS_IMPL[name](**args)            ← ★ 真正执行的是【你的代码】
+           messages.append({"role": "tool",
+                            "tool_call_id": tc.id,       ← ★ 就是它把"结果"和"请求"对上号
+                            "content": result})
+      7. 循环跑满 max_steps 还没 return → 说明出问题了。
+           返回一句说明（★ 不要静默返回 None —— 那会让调用方以为模型没说话）
+
+    返回：最终回答的字符串。
+
+    三个坑（手册点名 + D1 你亲手踩过的）：
+      · tc.function.arguments 是【JSON 字符串】。不 json.loads 就直接下标 → 报错
+      · TOOLS_IMPL 的值必须是【函数对象】—— D1 你这里踩过（"get_time" 加了引号变字符串）
+      · 模型可能编一个【不存在的工具名】→ TOOLS_IMPL[name] 抛 KeyError
+        ★ 想清楚：让它崩，还是接住、回一句"没有这个工具"给模型？
+          这就是 Week5「失败重试」的种子问题 —— D2 先想，不用做
+
+    要能回答（手册 D2 自查 4 条 + 培养方案 5 问）：
+      ① 模型怎么知道有哪些工具可用？   ② 工具是谁执行的？
+      ③ 为什么要 max_steps？            ④ tool_call_id 干什么的？
+      ⑤ 模型编造一个不存在的工具名会怎样？
+    """
+    messages=[{"role":"system","content":"需要算术时调用 calculator；需要当前日期/时间时调用 get_time。都不要自己编。"},
+              {"role":"user","content":question}
+              ]
+    for step in range(max_steps):
+        r=completion(client,model,messages=messages,tools=TOOLS_SPEC)
+        msg=r.choices[0].message
+        messages.append(msg)
+
+        if not msg.tool_calls:
+            return msg.content
+
+        for tc in msg.tool_calls:
+            args=json.loads(tc.function.arguments)
+            result=TOOLS_IMPL[tc.function.name](**args)
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
+
+    return "达到最大步数还未结束"
 
 
 # ============================================================
@@ -313,6 +366,7 @@ def main():
             head("跑 Agent")
             print(run_agent(client, model, "帮我算一下 (23*7+15)/2 等于多少"))
             print()
+            print(run_agent(client, model, "今天几号？"))
             print(run_agent(client, model, "你好，你是谁？"))
     except NotImplementedError as e:
         print(f"\n{WARN} {e}")
