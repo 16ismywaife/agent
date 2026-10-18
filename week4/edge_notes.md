@@ -67,7 +67,7 @@ FPS             →  模型【跑得多快】   （动态，测出来的，受�
 只差 `d5_detect` 与 `d6_bench` 两个函数体：
 
 ```powershell
-cd E:\agent
+cd D:\agent
 & "D:\anaconda\envs\AMSP_UOD\python.exe" week4\video_fps.py --check   # ★ 环境务必 AMSP_UOD
 & "D:\anaconda\envs\AMSP_UOD\python.exe" week4\video_fps.py --grab
 & "D:\anaconda\envs\AMSP_UOD\python.exe" week4\video_fps.py --image

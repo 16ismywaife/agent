@@ -259,7 +259,7 @@
 ## 七、每月的检查点（每月底对一次）
 
 ```powershell
-cd E:\agent
+cd D:\agent
 git log --oneline --since="1 month ago" | Measure-Object -Line   # 这个月提交了几次
 ```
 

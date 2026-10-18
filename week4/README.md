@@ -39,7 +39,7 @@
 ### 1 · Agent 方向（`agent_calc.py`）
 
 ```powershell
-cd E:\agent
+cd D:\agent
 & "D:\anaconda\envs\agent\python.exe" week4\agent_calc.py --check     # 只自检，不花钱
 & "D:\anaconda\envs\agent\python.exe" week4\agent_calc.py --sanity    # 发一次请求，看原始返回结构
 & "D:\anaconda\envs\agent\python.exe" week4\agent_calc.py             # 跑三个问题

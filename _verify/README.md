@@ -49,7 +49,7 @@ python _verify\check_requests.py _verify\requests.jsonl
 ### 2）真实模式（填完 `.env` 之后）
 
 ```powershell
-# 先确认 E:\agent\.env 里 API_KEY 填好了（.env 已被 .gitignore 排除）
+# 先确认 D:\agent\.env 里 API_KEY 填好了（.env 已被 .gitignore 排除）
 python _verify\verify_handbook_llm.py --real
 ```
 
