@@ -124,7 +124,7 @@ if hasattr(sys.stdout, "reconfigure"):
 **先理解这个链条，顺序不能跳：**
 
 ```
-① 工作区        你在 D:\agent 里编辑的文件
+① 工作区        你在 E:\04_脚本与代码\agent 里编辑的文件
       ↓  git add .
 ② 暂存区        "我准备把哪些改动打包"
       ↓  git commit -m "说明"
@@ -136,7 +136,7 @@ if hasattr(sys.stdout, "reconfigure"):
 **日常就这三条：**
 
 ```powershell
-cd D:\agent
+cd E:\04_脚本与代码\agent
 git add .                                  # ① 把所有改动放进暂存区
 git commit -m "week2: MNIST 训练脚本"       # ② 打包成一次提交
 git push                                   # ③ 推到 GitHub
@@ -2119,7 +2119,7 @@ cat log.txt | grep "acc"
 |---|---|---|
 | 路径分隔符 | `\` | `/` |
 | 家目录 | `$env:USERPROFILE` | `~`（**bash 里会展开**） |
-| 盘符 | `D:\agent` | `/e/agent` |
+| 盘符 | `E:\04_脚本与代码\agent` | `/e/agent` |
 | 删目录 | `Remove-Item -Recurse` | `rm -rf` |
 | 看文件 | `Get-Content` | `cat` |
 | 搜内容 | `Select-String` | `grep` |
@@ -3080,14 +3080,14 @@ content: prompt       →  ✅
 | `remote origin already exists` | 重复添加 | `git remote set-url origin 新地址` |
 | `failed to push some refs` | 远端有本地没有的提交 | `git pull --rebase origin main` 再 push |
 | `LF will be replaced by CRLF` | Windows 换行符警告 | **无害，忽略** |
-| `fatal: not a git repository` | 不在仓库目录里 | `cd D:\agent` |
+| `fatal: not a git repository` | 不在仓库目录里 | `cd E:\04_脚本与代码\agent` |
 
 ### 6.8 Windows / PowerShell 类
 
 | 现象 | 根因 | 解法 |
 |---|---|---|
 | `~` 在命令里不生效 | **PowerShell 不给外部程序展开 `~`** | 用 `$env:USERPROFILE`，或改用 Git Bash |
-| **`意外的标记"PS"` / `UnexpectedToken`** | **把提示符一起复制进终端了**。`PS D:\agent>` 是终端自己显示的，不是命令的一部分 | 只复制命令本身，从 `python` / `git` 这类词开始 |
+| **`意外的标记"PS"` / `UnexpectedToken`** | **把提示符一起复制进终端了**。`PS E:\04_脚本与代码\agent>` 是终端自己显示的，不是命令的一部分 | 只复制命令本身，从 `python` / `git` 这类词开始 |
 | 命令退出码 1 但其实成功了 | PowerShell 把 stderr 输出当错误 | 看实际输出内容，别只看退出码 |
 | `ssh -T git@github.com` 退出码 1 | **这是正常的**，成功也是 1 | 看输出有没有 `Hi 用户名!` |
 | 中文命令输出乱码 | 控制台代码页 | `chcp 65001` |
@@ -3097,7 +3097,7 @@ content: prompt       →  ✅
 终端最左边那串东西不是命令，是**状态显示**：
 
 ```
-(agent)  PS  D:\agent>
+(agent)  PS  E:\04_脚本与代码\agent>
    ↑      ↑      ↑
  哪个环境  什么shell  当前目录
 ```
@@ -3106,8 +3106,8 @@ content: prompt       →  ✅
 |---|---|---|
 | `(agent)` | ✅ 环境对 | — |
 | `(base)` / 没有括号 | ❌ 环境不对 | `conda activate agent` |
-| `D:\agent>` | ✅ 目录对 | — |
-| `C:\Users\omen>` | ❌ 目录不对 | `cd D:\agent` |
+| `E:\04_脚本与代码\agent>` | ✅ 目录对 | — |
+| `C:\Users\omen>` | ❌ 目录不对 | `cd E:\04_脚本与代码\agent` |
 
 **两个最常见的粘贴事故：**
 
@@ -3168,7 +3168,7 @@ except APIError as e:
 
 > **`.env` 的四个自检**（每次动完配置跑一遍）：
 > ```powershell
-> cd D:\agent
+> cd E:\04_脚本与代码\agent
 > Test-Path .env                      # True 说明文件在
 > git check-ignore -v .env            # 必须输出一行（说明被忽略）；没输出 = 危险
 > git status --short                  # 确认列表里【没有】.env
@@ -3235,7 +3235,7 @@ except APIError as e:
 > **"回复前先执行 `Get-Date`"**，而不是"我记得今天是几号"。
 
 ```powershell
-cd D:\agent
+cd E:\04_脚本与代码\agent
 git status                                    # 有没有没提交的
 git add .
 git commit -m "..."

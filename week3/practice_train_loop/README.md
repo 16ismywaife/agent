@@ -62,7 +62,7 @@
 **这个练习才是关键。**
 
 ```powershell
-cd D:\agent\week3\practice_train_loop
+cd E:\04_脚本与代码\agent\week3\practice_train_loop
 python breakdown.py
 ```
 

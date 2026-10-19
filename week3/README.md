@@ -17,7 +17,7 @@ pip install openai python-dotenv
 ### 2. 配 `.env`（在仓库根目录，不是这里）
 
 ```powershell
-cd D:\agent
+cd E:\04_脚本与代码\agent
 copy .env.example .env
 python week3\_set_key.py       # ★ 用它填 Key：不显示、不进命令历史
 notepad .env                   # 再补 BASE_URL 和 MODEL
@@ -153,7 +153,7 @@ python week3\day1.py --all          # 全部
 ## 六、每天结束时
 
 ```powershell
-cd D:\agent
+cd E:\04_脚本与代码\agent
 git add .
 git commit -m "week3: dayX ..."
 git push

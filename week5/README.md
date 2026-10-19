@@ -93,7 +93,7 @@ Week4 的 `run_agent()` 只有"跑通 / 没跑通"两个状态。这个模块是
 
 | 项 | 状态 |
 |---|---|
-| 工作目录 | `D:\agent`（原 `E:\agent` 随盘损坏，2026-10-16） |
+| 工作目录 | `E:\04_脚本与代码\agent`（原 `E:\agent` 随盘损坏，2026-10-16） |
 | 数据库文件 | `logs\agent_calls.db` —— `logs/` 已 gitignore，**不入库** |
 | 需要 `.env` 吗 | ❌ **不需要**。本模块不发任何网络请求，全部离线可跑 |
 | 能花 API 钱吗 | ❌ 不会。`--self-test` 走的是本地 `calculator` / `get_time`，不调 LLM |
