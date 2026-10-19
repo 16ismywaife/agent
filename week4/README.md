@@ -63,7 +63,7 @@ ollama list
 & "D:\anaconda\envs\agent\python.exe" week4\ctx_status.py --ask "你好"  # 看一条消息占多少上下文
 ```
 
-模型落在 **`E:\ollama-models`**（3.1 GB，C 盘 0 MB）。
+模型落在 **`E:\07_AI模型\ollama`**（3.1 GB，C 盘 0 MB）。
 
 ### 3 · 视频 Edge 方向（★ 未做，见第五节）
 

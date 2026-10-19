@@ -33,7 +33,13 @@ Ollama 用的库    cuda_v13
 | 下载渠道 | **GitHub release**（winget 失败，见下） |
 | 下载耗时 | **52.6 分钟**（平均 0.48 MB/s） |
 | 安装位置 | `C:\Users\omen\AppData\Local\Programs\Ollama\`（程序约 27 MB） |
-| 模型目录 | **`E:\ollama-models`**（改了环境变量） |
+| 模型目录 | **`E:\07_AI模型\ollama`**（改了环境变量） |
+
+> **⚠️ 路径变迁（2026-10-19 补）**：上面这些命令和数据是 **10-10 实测**的，当时的模型目录是
+> `E:\ollama-models`。**10-16 那块盘摔坏**，模型在 10-18 从 C 盘捞回来、10-19 挪到新盘的
+> `E:\07_AI模型\ollama`。**大小的结论（3.1 GB / C 盘 0 MB）仍然成立**，
+> 只是路径换了 —— 本文件里的命令已按当前路径更新。
+> 教训：**`OLLAMA_MODELS` 指错目录时，Ollama 不会报错，只会当作"模型不存在"**。
 
 ### 坑 1：winget 装不上 —— GitHub 不通
 
@@ -55,7 +61,7 @@ Invoke-WebRequest -Uri $url -OutFile "E:\OllamaSetup.exe" `
 ### 坑 2：模型**必须**在下第一个模型之前改目录
 
 ```powershell
-[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "E:\ollama-models", "User")
+[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "E:\07_AI模型\ollama", "User")
 ```
 
 **为什么必须提前**：先 `ollama pull` 再改变量的话，**已下到 C 盘的模型不会自己搬过去**，
@@ -64,7 +70,7 @@ Ollama 会当作"没有这个模型"**重新下 3 GB**。
 **验证生效**（实测）：
 
 ```
-E:\ollama-models          3.1 GB     ✅
+E:\07_AI模型\ollama          3.1 GB     ✅
 C:\Users\omen\.ollama\models   0 MB  ✅ 没被偷用
 ```
 
@@ -397,7 +403,7 @@ Agent 每步都重发整段历史，而 **system + 工具说明每次一字不�
 
 ```powershell
 # 环境变量（改完要重启终端 / 重启 Ollama）
-[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "E:\ollama-models", "User")
+[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "E:\07_AI模型\ollama", "User")
 
 # 服务（安装后托盘会有图标，或手动起）
 & "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" serve

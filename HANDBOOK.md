@@ -2299,7 +2299,7 @@ print(f"总耗时 {time.time()-t_start:.1f}s")
 ```bash
 # ★ 1. 先设模型目录（你 C 盘只剩 20 多 GB，模型别放那儿）
 #      要在装 Ollama 之前设好，改完重启终端
-[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "E:\ollama-models", "User")
+[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "E:\07_AI模型\ollama", "User")
 
 # ★ 2. 拉模型
 ollama pull qwen3.5:4b
