@@ -93,11 +93,16 @@ def demo():
     initialize(conn)
 
     # 用真的计算，不用模型（不花钱、不联网）
-    record(conn, "calc", eval, "23*7+15")      # 1: 正常
-    record(conn, "calc", eval, "6*7")          # 2: 正常
-    record(conn, "calc", eval, "1/0")          # 3: 应该失败（除零）
+    # ★ 工具名照 week4 的真实名字写 "calculator" —— 别在这里另起一个 "calc"，
+    #   不然最小版的库和正式版的库对不上，看数据时会以为出错了。
+    record(conn, "calculator", eval, "23*7+15")      # 1: 正常
+    record(conn, "calculator", eval, "6*7")          # 2: 正常
+    record(conn, "calculator", eval, "1/0")          # 3: 应该失败（除零）
 
-    print("\n表里现在有：")
+    # ★ 日志是【累积】的：每跑一次这个脚本就多 3 行，不会覆盖。
+    #   想从干净状态重来，先把 logs/min.db 删掉。
+    n = conn.execute("SELECT COUNT(*) FROM calls").fetchone()[0]
+    print(f"\n表里现在一共 {n} 行（本次新增 3 行；跑第 N 次就是 3N 行）：")
     for r in conn.execute("SELECT id, tool, success, elapsed_ms FROM calls"):
         print("  ", r)
     conn.close()
