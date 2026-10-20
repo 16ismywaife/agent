@@ -8,6 +8,7 @@
 
 跑完你应该看到 3 行记录，其中 1 行是失败的（除零）。
 """
+import os
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -76,6 +77,12 @@ def record(conn, tool, fn, *args):
 
 
 def demo():
+    # ★ 相对路径 "logs/min.db" 是相对【你从哪个目录运行】的，不是相对这个文件。
+    #   在 PyCharm 里直接 Run，工作目录默认是脚本所在目录（week5\），
+    #   数据库就会落在 week5\logs\ 里。所以这里先把目录建出来，免得报
+    #   "unable to open database file"（这个报错不会告诉你是路径问题）。
+    os.makedirs(os.path.dirname(DB) or ".", exist_ok=True)
+    print("数据库写到: " + os.path.abspath(DB))
     conn = sqlite3.connect(DB)
     initialize(conn)
 

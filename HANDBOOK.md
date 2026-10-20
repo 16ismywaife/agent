@@ -115,6 +115,56 @@ if hasattr(sys.stdout, "reconfigure"):
 
 **不加的话，终端里中文全是乱码。**
 
+### 在 PyCharm 里打开这个仓库（2026-10-20 换盘后重写）
+
+> **为什么单独写一节**：Week2 那次把项目根目录开成了 `week1`，**Git 面板看不到整个仓库**，
+> 折腾半天才发现是"打开的位置不对"。换盘后路径变成带中文的 `E:\04_脚本与代码\agent`，
+> 更容易开错，所以照着这五步走。
+
+**① 打开的位置：`E:\04_脚本与代码\agent`（仓库根，不是 `week5`、不是 `week1`）**
+
+```
+File → Open...  →  选 E:\04_脚本与代码\agent  →  Open
+弹出 "Trust project?" → Trust Project
+```
+
+判断开对没有：**左侧项目树里能同时看到 `week1` ~ `week6`、`HANDBOOK.md`、`notes`** —— 看到这个就是根目录。
+只看到一堆 `.py` 和一个 README，说明开到子目录去了，`File → Open` 重来。
+
+**② 解释器：必须指向 `agent` 环境**
+
+```
+File → Settings → Project: agent → Python Interpreter → Add Interpreter
+    → Conda Environment → 已存在的环境 → D:\anaconda\envs\agent\python.exe
+```
+
+**③ 工作目录（★ 最容易错的一步）**
+
+PyCharm 默认把**脚本所在目录**当工作目录。所以直接 Run `week5\call_log.py` 时，
+相对路径 `logs/xxx.db` 会落到 `week5\logs\` 里，而不是仓库根的 `logs\`。
+
+```
+Run → Edit Configurations → 选中你的配置 → Working directory
+    → 改成 E:\04_脚本与代码\agent
+```
+
+**④ 验证开了个对的**（三条都过才算）
+
+| 检查 | 期望 |
+|---|---|
+| 左下 Terminal | 提示符前有 `(agent)`；路径是仓库根 |
+| 左侧 Git 面板（Alt+9） | 能看到**全部历史提交**，不是空的 |
+| 随便跑个脚本 | 不报"路径不存在"、不报找不到模块 |
+
+**⑤ 把死掉的老项目从最近列表删掉**
+
+之前开过 `E:\agent` 和 `E:\agent\week1`（旧盘，已随盘阵亡）。
+在欢迎界面或 `File → Open Recent` 里**右键 → Remove from Recent Projects**，
+否则 PyCharm 每次启动都去解析一堆不存在的路径。
+
+> **`.idea/` 不用管**：它已经被 `.gitignore` 排除，不会污染仓库；
+> 旧盘上那份配置已经没了，重新打开会自动生成一份新的。
+
 ---
 
 ## 3. 文件提交方式（Git 完整版）
