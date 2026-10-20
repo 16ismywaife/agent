@@ -86,14 +86,19 @@ $doc = @'
 Get-FileHash "{3}\HANDBOOK.md" -Algorithm SHA256
 ```
 
-和上表的值一样 = 这份备份是新的；不一样 = 这份备份旧了，重跑一次 _backup.ps1。
+和上表的值一样 = 这份备份是新的；不一样 = 这份备份旧了，重跑一次 _backup.cmd。
 
 ## 怎么更新这份备份
 
 ```powershell
 cd "{2}"
-.\_backup.ps1
+.\_backup.cmd
 ```
+
+> 为什么是 `.cmd` 不是 `.ps1`：本机的 PowerShell 执行策略是 **Restricted**，
+> 直接跑 `.\_backup.ps1` 会被拒绝（"在此系统上禁止运行脚本"）。
+> `_backup.cmd` 用 `-ExecutionPolicy Bypass` **只对这一次**放宽，不改系统设置。
+> 想一劳永逸也可以自己开：`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`（这是改系统设置，自己决定）。
 
 ## 什么时候该更新
 
