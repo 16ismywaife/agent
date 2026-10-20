@@ -348,25 +348,50 @@ def print_table(title, rows, cols):
 
 
 def do_report(db_path, out_path=None):
+    """出三张报表。★ 每张单独兜底：某一张还没写（TODO），另外两张照样能看。
+
+    这样 D3 写完表① 就能立刻验收，不用等 D4 把表②③也写完。
+    """
     rep = Report(db_path)
     try:
         lines = []
 
-        rows = rep.stats_by_tool()
-        cols = [("tool", "工具", 14), ("n", "次数", 8), ("rate", "成功率%", 10),
-                ("avg_ms", "平均ms", 10), ("p95_ms", "P95ms", 10)]
-        print_table("报表 ① · 按工具汇总", rows, cols)
-        for r in rows:
-            lines.append("| {tool} | {n} | {rate} | {avg_ms} | {p95_ms} |".format(**dict(r)))
+        # ---------- 表 ① ----------
+        try:
+            rows = rep.stats_by_tool()
+        except NotImplementedError:
+            head("报表 ① · 按工具汇总")
+            print(f"{WARN} stats_by_tool() 还没写（D3 的任务）")
+            rows = []
+        if rows:
+            cols = [("tool", "工具", 14), ("n", "次数", 8), ("rate", "成功率%", 10),
+                    ("avg_ms", "平均ms", 10), ("p95_ms", "P95ms", 10)]
+            print_table("报表 ① · 按工具汇总", rows, cols)
+            for r in rows:
+                lines.append("| {tool} | {n} | {rate} | {avg_ms} | {p95_ms} |".format(**dict(r)))
 
-        rows = rep.slow_calls(10)
-        cols = [("ts", "时间", 26), ("tool", "工具", 14), ("elapsed_ms", "耗时ms", 10)]
-        print_table("报表 ② · 最慢的 10 次", rows, cols)
+        # ---------- 表 ② ----------
+        try:
+            rows = rep.slow_calls(10)
+        except NotImplementedError:
+            head("报表 ② · 最慢的 10 次")
+            print(f"{WARN} slow_calls() 还没写（D4 的任务）")
+            rows = []
+        if rows:
+            cols = [("ts", "时间", 26), ("tool", "工具", 14), ("elapsed_ms", "耗时ms", 10)]
+            print_table("报表 ② · 最慢的 10 次", rows, cols)
 
-        rows = rep.failures()
-        cols = [("ts", "时间", 26), ("tool", "工具", 14), ("elapsed_ms", "耗时ms", 10),
-                ("error", "错误", 40)]
-        print_table("报表 ③ · 失败清单", rows, cols)
+        # ---------- 表 ③ ----------
+        try:
+            rows = rep.failures()
+        except NotImplementedError:
+            head("报表 ③ · 失败清单")
+            print(f"{WARN} failures() 还没写（D4 的任务）")
+            rows = []
+        if rows:
+            cols = [("ts", "时间", 26), ("tool", "工具", 14), ("elapsed_ms", "耗时ms", 10),
+                    ("error", "错误", 40)]
+            print_table("报表 ③ · 失败清单", rows, cols)
 
         if out_path:
             with open(out_path, "w", encoding="utf-8") as f:
