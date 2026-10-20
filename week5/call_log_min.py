@@ -36,7 +36,9 @@ def initialize(conn):
         conn.commit()                # ★ 不提交，改动不生效
         return conn                  # 方便链式调用
     """
-    raise NotImplementedError("TODO ① 没写")
+    conn.executescript(SCHEMA)
+    conn.commit()
+    return conn
 
 
 def insert_call(conn, row):
@@ -48,7 +50,11 @@ def insert_call(conn, row):
         conn.execute(语句, 参数元组)     # 参数从 row 里取：row["tool"] / row["ts"] ...
         conn.commit()
     """
-    raise NotImplementedError("TODO ② 没写")
+    conn.execute(
+        "INSERT into calls (ts, tool, success, elapsed_ms) VALUES (?, ?, ?, ?)",
+        (row["ts"], row["tool"], row["success"], row["elapsed_ms"]),
+    )
+    conn.commit()
 
 
 # ======================= 下面全是我写好的，看懂了就行 =======================
