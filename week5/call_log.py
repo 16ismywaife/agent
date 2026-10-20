@@ -197,7 +197,9 @@ def initialize(conn):
       → 应该打印 OK 建表，并且 sqlite3 里能看到 calls 表
     """
     # TODO: 在这里写你的代码（提示：三行就够）
-    raise NotImplementedError("initialize 还没写（D2 的任务）")
+    conn.executescript(SCHEMA)
+    conn.commit()
+    return conn
 
 
 # ---------------------------- TODO ② ----------------------------
@@ -220,7 +222,11 @@ def insert_call(conn, row):
       python week5\\call_log.py --report       ← 能看到刚写的这条
     """
     # TODO: 在这里写你的代码
-    raise NotImplementedError("insert_call 还没写（D2 的任务）")
+    conn.execute(
+        "INSERT into calls (ts, tool, success, elapsed_ms,args,result,error) VALUES (?, ?, ?, ?,?,?,?)",
+        (row["ts"], row["tool"], row["success"], row["elapsed_ms"], row["args"], row["result"], row["error"]),
+    )
+    conn.commit()
 
 
 # ---------------------------- TODO ③ ----------------------------
