@@ -296,7 +296,25 @@ class Report:
         > **记一笔**：这是"凭印象写断言"的一次翻车 —— 断言要么自己跑一遍，要么标注"未验证"。
         """
         # TODO: 在这里写你的代码
-        raise NotImplementedError("stats_by_tool 还没写（D3 的任务）")
+        rows = self.q("""
+            SELECT tool, COUNT(*) AS n,
+                   ROUND(AVG(success)*100, 1) AS rate,
+                   ROUND(AVG(elapsed_ms), 1)  AS avg_ms
+            FROM calls
+            GROUP BY tool
+            ORDER BY n DESC
+        """)
+
+        out = []
+        for r in rows:
+            out.append({
+                "tool": r["tool"],
+                "n": r["n"],
+                "rate": r["rate"],
+                "avg_ms": r["avg_ms"],
+                "p95_ms": None,
+            })
+        return out
 
     # ---------------- D4 ----------------
     def slow_calls(self, limit=10):
