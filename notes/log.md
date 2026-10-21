@@ -659,6 +659,29 @@ B 陷阱题 3/3 ✅ / E 逻辑 3/3 ✅ / F 代码 3/3 ✅ —— 都不差。
 
 ---
 
+## 10-21（Week5 · D3 补核心逻辑：报表①）
+
+- **写了 `stats_by_tool()`**：一句 `GROUP BY` 拿「次数 / 成功率 / 平均耗时」，
+  再对每个工具单独查一次 P95
+  - SQL：`SELECT tool, COUNT(*) AS n, ROUND(AVG(success)*100,1), ROUND(AVG(elapsed_ms),1) FROM calls GROUP BY tool ORDER BY n DESC`
+  - P95：`k = math.ceil(0.95*n)` → `ORDER BY elapsed_ms LIMIT 1 OFFSET k-1`（nearest-rank）
+- **卡了 1**：漏了 `rows = self.q(...)` 这一句 —— AI 给的样例把 SQL 单独放在外面，我照着写就少了定义，
+  报 `NameError: name 'rows' is not defined`
+  - **★ 教训（对 AI 也适用）**：给代码片段必须给**完整可粘贴的整段**，否则新手分不清"这段放哪"
+- **卡了 2**：`"tool":r["tool"].` —— 行尾写成句号，Python 却把报错指到**下一行**
+  - **抓手**：报错指向某行时，**先看上一行写完了没有**（逗号/括号/冒号这类连接符最容易漏）
+- **★ 结果一看就懂为什么要有 P95**：
+
+  | 工具 | 平均耗时 | P95 |
+  |---|---|---|
+  | calculator | 253.3 ms | **3800.5 ms** |
+  | get_time | 0.4 ms | 0.5 ms |
+
+  calculator 的 16 次里 15 次都在 16 ms 以内，只有一次跑了 3.8 秒（那条"3000 万次求和"的样本）。
+  **平均值把它摊平了，P95 把它暴露出来** —— 用户感受到的卡顿永远是后者
+
+---
+
 <!--
 往下加新的一天。三行就够：
 
