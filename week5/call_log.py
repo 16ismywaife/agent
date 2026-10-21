@@ -297,23 +297,30 @@ class Report:
         """
         # TODO: 在这里写你的代码
         rows = self.q("""
-            SELECT tool, COUNT(*) AS n,
-                   ROUND(AVG(success)*100, 1) AS rate,
-                   ROUND(AVG(elapsed_ms), 1)  AS avg_ms
-            FROM calls
-            GROUP BY tool
-            ORDER BY n DESC
-        """)
+                SELECT tool, COUNT(*) AS n,
+                       ROUND(AVG(success)*100, 1) AS rate,
+                       ROUND(AVG(elapsed_ms), 1)  AS avg_ms
+                FROM calls
+                GROUP BY tool
+                ORDER BY n DESC
+            """)
 
         out = []
         for r in rows:
-            out.append({
-                "tool": r["tool"],
-                "n": r["n"],
-                "rate": r["rate"],
-                "avg_ms": r["avg_ms"],
-                "p95_ms": None,
-            })
+                n = r["n"]  # 这个工具调了几次
+                k = math.ceil(0.95 * n)  # 第 95% 名次（从 1 数）
+                p95 = self.q(
+                    "SELECT elapsed_ms FROM calls WHERE tool = ? "
+                    "ORDER BY elapsed_ms LIMIT 1 OFFSET ?",
+                    (r["tool"], k - 1),  # OFFSET 从 0 数，所以减 1
+                )[0]["elapsed_ms"]
+                out.append({
+                    "tool": r["tool"],
+                    "n": n,
+                    "rate": r["rate"],
+                    "avg_ms": r["avg_ms"],
+                    "p95_ms": p95,
+                })
         return out
 
     # ---------------- D4 ----------------
