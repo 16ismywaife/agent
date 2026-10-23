@@ -34,3 +34,28 @@ elapsed_ms  REAL NOT NULL
 """)
 conn.commit()
 print("done")
+
+conn.execute(
+    "INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
+    ("2026-10-23T15:45","calculator",1,12.3),
+)
+conn.commit()
+conn.executemany("INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
+[("2026-10-23T10:00", "calculator", 1, 8.3),
+("2026-10-23T10:01", "calculator", 0, 0.6),
+("2026-10-23T10:02", "get_time",   1, 0.4),
+("2026-10-23T10:03", "calculator", 1, 12.4),]
+             )
+conn.commit()
+
+sql="""
+SELECT tool,
+count(*) AS n,
+ROUND(AVG(success)*100,1) AS rate,
+ROUND(AVG(elapsed_ms),1) AS avg_ms
+FROM calls
+GROUP BY tool
+ORDER BY n DESC
+"""
+for r in conn.execute(sql):
+    print(r)
