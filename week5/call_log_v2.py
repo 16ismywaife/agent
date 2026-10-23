@@ -57,5 +57,9 @@ FROM calls
 GROUP BY tool
 ORDER BY n DESC
 """
-for r in conn.execute(sql):
-    print(r)
+rows=conn.execute(sql).fetchall()
+
+print(f"{'tool':<12}{'n':>4}{'rate':>8}{'avg_ms':>9}")
+for t,n,rate,avg in rows:
+    print(f"{t:<12}{n:>4}{rate:>8}{avg:>9}")
+
