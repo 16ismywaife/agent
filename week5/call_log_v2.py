@@ -19,6 +19,7 @@
     D:\\anaconda\\envs\\agent\\python.exe week5\\call_log_v2.py
 """
 import sqlite3
+import sys
 
 DB="logs/v2.db"
 def connect():
@@ -72,6 +73,7 @@ def report(conn):
 if __name__ == "__main__":
     conn=connect()
     init(conn)
-    add(conn)
+    if "--report" not in sys.argv:
+        add(conn)
     report(conn)
     conn.close()
