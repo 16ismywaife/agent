@@ -21,45 +21,57 @@
 import sqlite3
 
 DB="logs/v2.db"
-conn = sqlite3.connect(DB)
+def connect():
+    return sqlite3.connect(DB)
 
-conn.executescript("""
-CREATE TABLE IF NOT EXISTS calls (
-id          INTEGER PRIMARY KEY AUTOINCREMENT,
-ts          TEXT NOT NULL,
-tool        TEXT NOT NULL,
-success     INTEGER NOT NULL,
-elapsed_ms  REAL NOT NULL
-)
-""")
-conn.commit()
-print("done")
+def init(conn):
+    conn.executescript("""
+    CREATE TABLE IF NOT EXISTS calls (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts          TEXT NOT NULL,
+    tool        TEXT NOT NULL,
+    success     INTEGER NOT NULL,
+    elapsed_ms  REAL NOT NULL
+    )
+    """)
+    conn.commit()
+    print("done")
 
-conn.execute(
-    "INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
-    ("2026-10-23T15:45","calculator",1,12.3),
-)
-conn.commit()
-conn.executemany("INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
-[("2026-10-23T10:00", "calculator", 1, 8.3),
-("2026-10-23T10:01", "calculator", 0, 0.6),
-("2026-10-23T10:02", "get_time",   1, 0.4),
-("2026-10-23T10:03", "calculator", 1, 12.4),]
-             )
-conn.commit()
 
-sql="""
-SELECT tool,
-count(*) AS n,
-ROUND(AVG(success)*100,1) AS rate,
-ROUND(AVG(elapsed_ms),1) AS avg_ms
-FROM calls
-GROUP BY tool
-ORDER BY n DESC
-"""
-rows=conn.execute(sql).fetchall()
+def add(conn):
+    conn.execute(
+        "INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
+        ("2026-10-23T15:45","calculator",1,12.3),
+    )
+    conn.commit()
+    conn.executemany("INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
+    [("2026-10-23T10:00", "calculator", 1, 8.3),
+    ("2026-10-23T10:01", "calculator", 0, 0.6),
+    ("2026-10-23T10:02", "get_time",   1, 0.4),
+    ("2026-10-23T10:03", "calculator", 1, 12.4),]
+                 )
+    conn.commit()
 
-print(f"{'tool':<12}{'n':>4}{'rate':>8}{'avg_ms':>9}")
-for t,n,rate,avg in rows:
-    print(f"{t:<12}{n:>4}{rate:>8}{avg:>9}")
 
+def report(conn):
+    sql="""
+    SELECT tool,
+    count(*) AS n,
+    ROUND(AVG(success)*100,1) AS rate,
+    ROUND(AVG(elapsed_ms),1) AS avg_ms
+    FROM calls
+    GROUP BY tool
+    ORDER BY n DESC
+    """
+    rows=conn.execute(sql).fetchall()
+
+    print(f"{'tool':<12}{'n':>4}{'rate':>8}{'avg_ms':>9}")
+    for t,n,rate,avg in rows:
+        print(f"{t:<12}{n:>4}{rate:>8}{avg:>9}")
+
+if __name__ == "__main__":
+    conn=connect()
+    init(conn)
+    add(conn)
+    report(conn)
+    conn.close()
