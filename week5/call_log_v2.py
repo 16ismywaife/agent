@@ -20,9 +20,11 @@
 """
 import sqlite3
 import sys
+import os
 
 DB="logs/v2.db"
 def connect():
+    os.makedirs("logs", exist_ok=True)
     return sqlite3.connect(DB)
 
 def init(conn):
@@ -88,7 +90,7 @@ def fails(conn):
     rows=conn.execute(sql).fetchall()
     print(f"{'ts':<20}{'tool':<12}{'elapsed_ms':>11}{'error':>8}")
     for t,tool,elapsed_ms,error in rows:
-        print(f"{t:<20}{tool:<12}{elapsed_ms:>11}{error!s:>8}")
+        print(f"{t:<20}{tool:<12}{elapsed_ms:>11}  {(error or''):<24}")
 
 if __name__ == "__main__":
     conn=connect()
