@@ -32,7 +32,8 @@ def init(conn):
     ts          TEXT NOT NULL,
     tool        TEXT NOT NULL,
     success     INTEGER NOT NULL,
-    elapsed_ms  REAL NOT NULL
+    elapsed_ms  REAL NOT NULL,
+    error       TEXT
     )
     """)
     conn.commit()
@@ -45,11 +46,12 @@ def add(conn):
         ("2026-10-23T15:45","calculator",1,12.3),
     )
     conn.commit()
-    conn.executemany("INSERT INTO calls(ts,tool,success,elapsed_ms) VALUES (?,?,?,?)",
-    [("2026-10-23T10:00", "calculator", 1, 8.3),
-    ("2026-10-23T10:01", "calculator", 0, 0.6),
-    ("2026-10-23T10:02", "get_time",   1, 0.4),
-    ("2026-10-23T10:03", "calculator", 1, 12.4),]
+    conn.executemany("INSERT INTO calls(ts,tool,success,elapsed_ms,error) VALUES (?,?,?,?,?)",
+    [("2026-10-23T10:00", "calculator", 1, 8.3,None),
+    ("2026-10-23T10:01", "calculator", 0, 0.6,"计算错误division by zero"),
+    ("2026-10-23T10:02", "get_time",   1, 0.4,None),
+    ("2026-10-23T10:03", "calculator", 1, 12.4,None),
+     ]
                  )
     conn.commit()
 
@@ -70,10 +72,30 @@ def report(conn):
     for t,n,rate,avg in rows:
         print(f"{t:<12}{n:>4}{rate:>8}{avg:>9}")
 
+def slow(conn):
+    sql="""
+    SELECT ts,tool,elapsed_ms FROM calls ORDER BY elapsed_ms DESC LIMIT 10
+    """
+    rows=conn.execute(sql).fetchall()
+    print(f"{'ts':<20}{'tool':<12}{'elapsed_ms':>11}")
+    for t,tool,elapsed_ms in rows:
+        print(f"{t:<20}{tool:<12}{elapsed_ms:>11}")
+
+def fails(conn):
+    sql="""
+    SELECT ts, tool, elapsed_ms, error FROM calls WHERE success = 0
+    """
+    rows=conn.execute(sql).fetchall()
+    print(f"{'ts':<20}{'tool':<12}{'elapsed_ms':>11}{'error':>8}")
+    for t,tool,elapsed_ms,error in rows:
+        print(f"{t:<20}{tool:<12}{elapsed_ms:>11}{error!s:>8}")
+
 if __name__ == "__main__":
     conn=connect()
     init(conn)
     if "--report" not in sys.argv:
         add(conn)
     report(conn)
+    slow(conn)
+    fails(conn)
     conn.close()
