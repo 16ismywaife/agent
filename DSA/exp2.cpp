@@ -36,7 +36,10 @@ typedef struct linknode
 // ★ 为什么不用头结点：栈只需要"栈顶在哪"，不需要遍历，所以 S 直接指向第一个数据结点
 void Push(LiStack &S, ElemType e)
 {
-    // TODO
+    LiStack q=(LiStack)malloc(sizeof(LiNode));
+    q->data=e;
+    q->next=S;
+    S=q;
 }
 
 // ② 出栈：把栈顶元素取出来，通过引用 e 带出去
@@ -49,8 +52,12 @@ void Push(LiStack &S, ElemType e)
 //   6. return true;
 bool Pop(LiStack &S, ElemType &e)
 {
-    // TODO
-    return false;
+    if(S==NULL)return false;
+    e=S->data;
+    LiStack p=S;
+    S=S->next;
+    free(p);
+    return true;
 }
 
 
