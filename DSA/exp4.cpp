@@ -185,6 +185,7 @@ bool BracketMatch(const char *s)
 
 int main()
 {
+    system("chcp 65001 > nul");     // 让控制台按 UTF-8 显示（否则中文乱码）
     srand((unsigned)time(NULL));
 
     // ---------- (1) 链表分割 ----------

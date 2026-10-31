@@ -267,6 +267,7 @@ void CreateSorted(LinkList &L, int n)
 
 int main()
 {
+    system("chcp 65001 > nul");     // 让控制台按 UTF-8 显示（否则中文乱码）
     srand((unsigned)time(NULL));     // 随机种子：每跑一次数不一样
 
     LinkList L = NULL;

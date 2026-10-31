@@ -151,6 +151,7 @@ void DispQueue(LinkQueue Q)
 
 int main()
 {
+    system("chcp 65001 > nul");     // 让控制台按 UTF-8 显示（否则中文乱码）
     srand((unsigned)time(NULL));
 
     LinkQueue Q;
