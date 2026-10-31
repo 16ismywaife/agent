@@ -76,31 +76,71 @@ bool Pop(SNode *&S, ElemType &e)
 //
 // ★ 题目要求：不占用新的存储空间 + 注意时间复杂度
 //
-// 【思路】建两路链表（小 / 大），遍历原表把结点分别挂上去，最后接起来。
-//        全程只改 next 指针，不 malloc 任何结点。
+// ────────────────────────────────────────────────────────────
+// 【一、什么叫"假头"】
+//   假头（头结点）= 一个不存数据、只用来"占位"的结点。
+//   你其实一直在用它：题1 的 CreateListTail 里那句
+//       L = malloc(...);  L->next = NULL;
+//   建出来的 L 就是假头 —— 第一个数据结点挂在它后面。
 //
-// 【怎么写】用两个"假头结点"（在栈上开，不是 malloc，所以不算占空间）：
+//   假头有什么用？让"挂第一个结点"和"挂第 2、3 个结点"用同一句代码：
+//       tail->next = p;  tail = p;
+//   没有假头的话，每次都要先判断"现在表是不是空的"。
 //
-//   LNode bigHead;                    ← 大表用这个假头
+// 【二、什么叫"小表 / 大表"】
+//   不是新造两条链表！是把【原来的结点】分成两组，分别用两根尾巴串起来。
+//   一个结点都不 malloc，只改 next 指针。
+//
+// ────────────────────────────────────────────────────────────
+// 【三、怎么写：两个假头，左右对称，最好理解】
+//
+//   LNode smallHead, bigHead;                        ← 两个假头，开在栈上（不是 malloc）
+//   LNode *tailSmall = &smallHead;                   ← 尾巴指针：一开始指向假头
+//   LNode *tailBig   = &bigHead;
+//   smallHead.next = NULL;
 //   bigHead.next = NULL;
-//   LNode *tailSmall = L;             ← ★ 小表直接用 L 这个头结点
-//   LNode *tailBig   = &bigHead;      ← 大表的尾巴，一开始指向假头
 //
-//   for (LNode *p = L->next; p != NULL; )      ← ★ 注意循环里自己推进 p
+//   for (LNode *p = L->next; p != NULL; )            ← ★ 注意 for 第三段是空的
 //   {
-//       LNode *next = p->next;                 ← ① 先存下一个（马上要改 p->next）
-//       if (p->data < pivot) { tailSmall->next = p; tailSmall = p; }
-//       else                 { tailBig->next   = p; tailBig   = p; }
-//       p = next;                              ← ② 再往前走
+//       LNode *pnext = p->next;                      ← ① 先存下一个（马上要改 p->next）
+//       if (p->data < pivot) { tailSmall->next = p; tailSmall = p; }   ← 挂到小表尾巴
+//       else                 { tailBig->next   = p; tailBig   = p; }   ← 挂到大表尾巴
+//       p = pnext;                                   ← ② 再往前走
 //   }
-//   tailSmall->next = bigHead.next;            ← ③ 小表尾巴接上大表
-//   tailBig->next = NULL;                      ← ④ 大表尾巴收尾（否则可能接到旧链）
+//   tailSmall->next = bigHead.next;                  ← ③ 小表的尾巴接上大表的第一个
+//   tailBig->next = NULL;                            ← ④ 大表收尾（否则可能接到旧链）
+//   L->next = smallHead.next;                        ← ⑤ 把结果接回 L 这个头结点后面
 //
-// 时间复杂度：一遍遍历 O(n)。空间：只用了两个指针，O(1)。
+// ★ 命名建议：变量别叫 next —— 会和结构体字段 p->next 看混。
+//   pnext / tailSmall / tailBig 这种名字，三天后回来看还认得出。
+//
+// 【四、为什么循环里必须自己推进 p】
+//   因为你把 p 挂到新表上时执行了 tailSmall->next = p，之后 p 的 next 会被覆盖成
+//   下一个挂进来的结点 —— 如果不先存 pnext，后面的元素全丢。
+//
+// 时间复杂度：一遍遍历 O(n)。空间：两个假头 + 几个指针，O(1)。
 void PartitionList(LinkList &L, ElemType pivot)
 {
-    // TODO
+    LNode smallhead,bighead;
+    LNode *tailsmall=&smallhead,*tailbig=&bighead;
+    smallhead.next=NULL;
+    bighead.next=NULL;
+    for(LNode *p=L->next;p!=NULL;){
+        LNode *pnext=p->next;
+        if(p->data<pivot){
+            tailsmall->next=p;
+            tailsmall=p;
+        }else{
+            tailbig->next=p;
+            tailbig=p;
+        }
+        p=pnext;
+    }
+    tailsmall->next=bighead.next;
+    tailbig->next=NULL;
+    L->next=smallhead.next;
 }
+
 
 // ② 括号匹配：判断字符串里的 () [] {} 是否【正确配对】
 //
@@ -125,8 +165,19 @@ bool IsMatch(char left, char right)
 
 bool BracketMatch(const char *s)
 {
-    // TODO
-    return false;
+    SNode *S=NULL;
+    for(int i=0;s[i]!='\0';i++){
+        char c=s[i];
+        if(c=='('||c=='['||c=='{'){
+            Push(S,c);
+        }else if(c==')'||c==']'||c=='}'){
+            ElemType top;
+            if(!Pop(S,top)) return false;
+            if(!IsMatch(top,c)) return false;
+        }
+
+    }
+    return S==NULL;
 }
 
 
