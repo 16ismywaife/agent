@@ -1,12 +1,4 @@
-// 实验报告1 · 题3：队列的链式存储结构（入队、出队、遍历、翻转）
-//
-// 编译/调试：建议复制到 C:\cppbuild\ 下再调试（中文路径 gdb 读不到源码）
-//   复制：Ctrl+Shift+P → Run Task → "复制到英文目录（调试用）"
-//
-// 题目要求：
-//   (1) 用随机函数生成 10 个 3 位整数（100~999），入队
-//   (2) 用遍历操作输出队列内容
-//   (3) 把队列的内容翻转，应用出队操作输出队列内容
+// 实验3 队列的链式存储结构的实现
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,25 +6,17 @@
 
 typedef int ElemType;
 
-// ==================== 队列 ====================
-
 typedef struct qnode
 {
     ElemType data;
     struct qnode *next;
 } QNode;
 
-// 链队列：需要一个【队头指针】和一个【队尾指针】
-//   为什么两个都要：入队在队尾（O(1)），出队在队头（O(1)）。只有一个指针的话必有一端要 O(n)
-//   课本用【带头结点】的写法：front 指向头结点，真正的队头元素是 front->next
 typedef struct
 {
-    QNode *front;    // 队头（指向头结点）
-    QNode *rear;     // 队尾（指向最后一个元素）
+    QNode *front;
+    QNode *rear;
 } LinkQueue;
-
-
-// ==================== 栈（翻转队列要用，你题2已经写过）====================
 
 typedef struct snode
 {
@@ -58,28 +42,12 @@ bool Pop(SNode *&S, ElemType &e)
     return true;
 }
 
-
-// ==================== 你写的函数 ====================
-
-// ① 初始化：建一个空队列（带头结点）
-//
-//   1. Q.front = Q.rear = (QNode *)malloc(sizeof(QNode));   ← 头结点，不存数据
-//   2. Q.front->next = NULL;
-//
-// 空队列的判定是 front == rear（不是 front == NULL）
 void InitQueue(LinkQueue &Q)
 {
     Q.front=Q.rear=(QNode*)malloc(sizeof(QNode));
     Q.front->next=NULL;
 }
 
-// ② 入队：把 e 放到队尾
-//
-//   1. 造新结点 q，q->data = e，q->next = NULL
-//   2. Q.rear->next = q;      ← 挂到队尾后面
-//   3. Q.rear = q;            ← 队尾指针后移
-//
-// 入队只动 rear，不动 front —— 这是 O(1) 的关键
 void EnQueue(LinkQueue &Q, ElemType e)
 {
     QNode *q=(QNode*)malloc(sizeof(QNode));
@@ -89,16 +57,6 @@ void EnQueue(LinkQueue &Q, ElemType e)
     Q.rear=q;
 }
 
-// ③ 出队：把队头元素取出来，通过引用 e 带出去
-//
-//   1. 判空：if (Q.front == Q.rear) return false;        ← 空队列的判定
-//   2. QNode *p = Q.front->next;      ← 真正的队头元素（跳过表头）
-//   3. e = p->data;
-//   4. Q.front->next = p->next;       ← 队头后移
-//   5. 特殊情况：如果 p 就是队尾（队列里只剩一个元素），
-//          Q.rear 现在指向一块马上要 free 的内存 —— 必须退回头结点：
-//          if (Q.rear == p) Q.rear = Q.front;
-//   6. free(p);  return true;
 bool DeQueue(LinkQueue &Q, ElemType &e)
 {
     if(Q.front==Q.rear) return false;
@@ -110,20 +68,6 @@ bool DeQueue(LinkQueue &Q, ElemType &e)
     return true;
 }
 
-// ④ 翻转队列：把队列里的元素顺序倒过来
-//
-// 思路：队列是先进先出，栈是后进先出 —— 用栈做中转，顺序就反了
-//
-//   1. SNode *S = NULL;                       ← 空栈
-//   2. while (Q.front != Q.rear) {            ← 队列非空
-//          DeQueue(Q, e);  Push(S, e);        ← 全部搬进栈
-//      }
-//   3. while (S != NULL) {                    ← 栈非空
-//          Pop(S, e);  EnQueue(Q, e);         ← 再全部搬回队列
-//      }
-//
-// 为什么这样能翻转：出队顺序 = a,b,c；入栈后栈顶是 c；
-//   出栈顺序 = c,b,a；再入队 → 队列变成 c,b,a。反了
 void ReverseQueue(LinkQueue &Q)
 {
     SNode *S=NULL;
@@ -138,9 +82,6 @@ void ReverseQueue(LinkQueue &Q)
     }
 }
 
-
-// ==================== 主函数 ====================
-
 void DispQueue(LinkQueue Q)
 {
     printf("队头 → ");
@@ -151,13 +92,12 @@ void DispQueue(LinkQueue Q)
 
 int main()
 {
-    system("chcp 65001 > nul");     // 让控制台按 UTF-8 显示（否则中文乱码）
+    system("chcp 65001 > nul");
     srand((unsigned)time(NULL));
 
     LinkQueue Q;
     InitQueue(Q);
 
-    // ---------- (1) 入队 10 个 ----------
     printf("--- 入队 ---\n");
     for (int i = 0; i < 10; i++)
     {
@@ -166,11 +106,9 @@ int main()
         printf("入队 %d\n", e);
     }
 
-    // ---------- (2) 遍历输出 ----------
     printf("\n--- 遍历（先进先出，顺序和入队一致）---\n");
     DispQueue(Q);
 
-    // ---------- (3) 翻转 ----------
     printf("\n--- 翻转 ---\n");
     printf("翻转前："); DispQueue(Q);
     ReverseQueue(Q);
@@ -182,43 +120,9 @@ int main()
         if (DeQueue(Q, e)) printf("出队 %d\n", e);
     printf("队列已空\n");
 
-    // ---------- 空队列再出队 ----------
     printf("\n--- 空队列出队（应该失败）---\n");
     if (DeQueue(Q, e)) printf("插入成功（位置越界，不应成功）\n");
     else printf("出队失败：队列为空\n");
 
     return 0;
 }
-
-// ==================== 期望输出 ====================
-// （下面这段是程序实际运行输出，随机数每次不同）
-//   --- 入队 ---
-//   入队 883
-//   入队 607
-//   入队 106
-//   入队 320
-//   入队 224
-//   入队 599
-//   入队 508
-//   入队 797
-//   入队 377
-//   入队 105
-//   --- 遍历（先进先出，顺序和入队一致）---
-//   队头 → 883 607 106 320 224 599 508 797 377 105 ← 队尾
-//   --- 翻转 ---
-//   翻转前：队头 → 883 607 106 320 224 599 508 797 377 105 ← 队尾
-//   翻转后：队头 → 105 377 797 508 599 224 320 106 607 883 ← 队尾
-//   --- 出队（顺序应该和入队【相反】）---
-//   出队 105
-//   出队 377
-//   出队 797
-//   出队 508
-//   出队 599
-//   出队 224
-//   出队 320
-//   出队 106
-//   出队 607
-//   出队 883
-//   队列已空
-//   --- 空队列出队（应该失败）---
-//   出队失败：队列为空
