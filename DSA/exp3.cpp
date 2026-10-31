@@ -69,7 +69,8 @@ bool Pop(SNode *&S, ElemType &e)
 // ★ 空队列的判定是 front == rear（不是 front == NULL）
 void InitQueue(LinkQueue &Q)
 {
-    // TODO
+    Q.front=Q.rear=(QNode*)malloc(sizeof(QNode));
+    Q.front->next=NULL;
 }
 
 // ② 入队：把 e 放到队尾
@@ -81,7 +82,11 @@ void InitQueue(LinkQueue &Q)
 // ★ 入队只动 rear，不动 front —— 这是 O(1) 的关键
 void EnQueue(LinkQueue &Q, ElemType e)
 {
-    // TODO
+    QNode *q=(QNode*)malloc(sizeof(QNode));
+    q->data=e;
+    q->next=NULL;
+    Q.rear->next=q;
+    Q.rear=q;
 }
 
 // ③ 出队：把队头元素取出来，通过引用 e 带出去
@@ -96,8 +101,13 @@ void EnQueue(LinkQueue &Q, ElemType e)
 //   6. free(p);  return true;
 bool DeQueue(LinkQueue &Q, ElemType &e)
 {
-    // TODO
-    return false;
+    if(Q.front==Q.rear) return false;
+    QNode *p=Q.front->next;
+    e=p->data;
+    Q.front->next=p->next;
+    if(Q.rear==p) Q.rear=Q.front;
+    free(p);
+    return true;
 }
 
 // ④ 翻转队列：把队列里的元素顺序倒过来
@@ -116,7 +126,16 @@ bool DeQueue(LinkQueue &Q, ElemType &e)
 //   出栈顺序 = c,b,a；再入队 → 队列变成 c,b,a。反了 ✅
 void ReverseQueue(LinkQueue &Q)
 {
-    // TODO
+    SNode *S=NULL;
+    ElemType e;
+    while(Q.front!=Q.rear){
+        DeQueue(Q,e);
+        Push(S,e);
+    }
+    while(S!=NULL){
+        Pop(S,e);
+        EnQueue(Q,e);
+    }
 }
 
 
