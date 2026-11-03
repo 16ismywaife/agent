@@ -18,6 +18,12 @@ venv/
 .idea/
 .DS_Store
 
+# ===== 编译产物 / Office 临时文件 =====
+# .exe 每次编译都变，源码在就能重新生成，没必要提交
+*.exe
+# Word / Excel / PPT 打开文件时生成的锁文件（~$xxx.docx）
+~$*
+
 # ===== 大文件 / 数据（提交上去仓库会变得很臃肿）=====
 data/
 checkpoints/

@@ -72,8 +72,13 @@ bool ListInsert(SqList *&L, int i, ElemType e)
     //      j 从 length-1 开始，一直到 i-1，每次做 data[j+1] = data[j]
     //      （从前往后挪会把自己的数据覆盖掉 —— 你可以先故意写反试试）
     //   4. data[i-1] = e; length++; return true
-    // TODO
-    return false;
+    if(i<1||i>L->length+1||L->length>=MaxSize) return false;
+    for(int j=L->length-1;j>=i-1;j--){
+        L->data[j+1]=L->data[j];
+    }
+    L->data[i-1]=e;
+    L->length++;
+    return true;
 }
 
 // ⑤ 删除下标 i 的元素，用引用 e 把删掉的值带出去（i 是逻辑序号，范围 1 ~ length）
@@ -86,8 +91,13 @@ bool ListDelete(SqList *&L, int i, ElemType &e)
     //      j 从 i 开始，一直到 length-1，每次做 data[j-1] = data[j]
     //      （删除是从前往后挪，和插入正好相反 —— 想想为什么）
     //   4. length--; return true
-    // TODO
-    return false;
+    if(i<1||i>L->length) return false;  
+    e=L->data[i-1];
+    for(int j=i;j<L->length;j++){
+        L->data[j-1]=L->data[j];
+    }
+    L->length--;
+    return true;    
 }
 
 
